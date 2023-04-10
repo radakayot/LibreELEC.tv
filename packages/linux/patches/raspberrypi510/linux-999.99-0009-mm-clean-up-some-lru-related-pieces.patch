@@ -1,0 +1,2694 @@
+From patchwork Fri Sep 18 03:00:39 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783917
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 12C8559D
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:04 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id A156F2395B
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:03 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="lqyqyA8B"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org A156F2395B
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id 1300D6B0071; Thu, 17 Sep 2020 23:01:02 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id 0E2F16B0072; Thu, 17 Sep 2020 23:01:02 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id EEC6D8E0001; Thu, 17 Sep 2020 23:01:01 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0041.hostedemail.com
+ [216.40.44.41])
+	by kanga.kvack.org (Postfix) with ESMTP id CADFE6B0071
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:01 -0400 (EDT)
+Received: from smtpin28.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay02.hostedemail.com (Postfix) with ESMTP id 8F11D3629
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:01 +0000 (UTC)
+X-FDA: 77274680322.28.drop76_3c0042227127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin28.hostedemail.com (Postfix) with ESMTP id 701576C04
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:01 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,f631789aa90eac1c,d41d8cd98f00b204,37cjkxwykcmm738qjxpxxpun.lxvurw36-vvt4jlt.x0p@flex--yuzhao.bounces.google.com,,RULES_HIT:41:152:355:379:541:800:960:966:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1535:1541:1593:1594:1711:1730:1747:1777:1792:2196:2199:2393:2559:2562:3138:3139:3140:3141:3142:3152:3352:3865:3871:3874:4321:4385:5007:6261:6653:6742:8957:9010:9969:10004:10400:11026:11473:11658:11914:12043:12114:12297:12438:12555:12895:13069:13161:13229:13311:13357:14181:14394:14659:14721:21080:21444:21451:21627:21740:30054,0,RBL:209.85.219.201:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-66.100.201.100
+ 62.18.0.100;04yr75f3z97y8dx9hy76r4om1pfd4opqxsuuxnxdf5dmiufeuqoxru1hnxrxsi8.3cmuwuhiyfdmgsfdppz1h9sof4jo18cg9hrwdw51rfbaetzjuqbh5wnoc4di1uq.k-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:0:0:0,LFtime:23,LUA_SUMMARY:none
+X-HE-Tag: drop76_3c0042227127
+X-Filterd-Recvd-Size: 5227
+Received: from mail-yb1-f201.google.com (mail-yb1-f201.google.com
+ [209.85.219.201])
+	by imf32.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:00 +0000 (UTC)
+Received: by mail-yb1-f201.google.com with SMTP id 141so4032644ybe.15
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:00 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=qvnHHsvBI3sH+b5g6Iv8RJ5s4+ZnaHU0vmrrO4o5gi4=;
+        b=lqyqyA8BFWcwFuv/9+MGNQiOru0sKjIbm0eSJ1ByXF6JVc9vr8FDv47rnqSsdyTs7t
+         S3NxZnk+2iO6CRHdaA4UalB3w3yZF3qC28jCD2uRk5cxex4zVBD5qDQbnTRcrAf07Nsc
+         ygcQl37PtmLBFqLAL8rbF46ASLQ1gAydzClOP5DevnlAsHwK/PfIrGSFDMam+ySaujJT
+         hanmi+54Txv+6VjCu9U3o7d4IJIv2iwSEqK4D9aDrbo1zTg7iqka8SpMD+NpS6lHugQs
+         AtUjhjYt1eOv7g1ZT8k0bRjvxL28/U/JID1UhXh/ggjhBucFBF095ClBMUlEnjXVJwfd
+         7itA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=qvnHHsvBI3sH+b5g6Iv8RJ5s4+ZnaHU0vmrrO4o5gi4=;
+        b=PPAHLOg7fZc9cvJZnskw15o8tDYe8PJ3fR5B217kKXzMk8WWn23TgIzlTLszFUn1k9
+         hAfbxzLJqopNs9Q8xrC6bk0c14wKfeQ/YBpK/o1pd13rjFLqVLW/EarO3o+9PCuZtvRY
+         H4Aclcxgpsx9SbHaXY5iNcmMh7psyQtHxj51UkIzjXUgYC690kCYEwkhuj7o7gCB+Skm
+         cAjrBcZ4lgHz/TMYKhdJ6C9N4aav5BgNE4q2+6WhlJh+QCqWPD1LDZGLs0jl9DcbwfPF
+         6WPtOU4RrFcplDMs9HuxTqQiGlBBI3v4TmFDmTjJFsGjKW/LCBSZpUpcRjhnRKwcwc54
+         J76g==
+X-Gm-Message-State: AOAM530xY5movEMh7vHXGkavRHEYIjchmmeoYdgO7BbM7dikBly8GcVC
+	3hdFJWBUxT8m8VgR8n4KH+Nrcqu4qAw=
+X-Google-Smtp-Source: 
+ ABdhPJyA4fGWHBfcQZD/N2EVVdQdNHe3Em/oy/TsXnSZ8yngh1zsEqbYH+EijegunexsuYkqKBR265IH8Wg=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a25:ad16:: with SMTP id
+ y22mr6703066ybi.331.1600398060014;
+ Thu, 17 Sep 2020 20:01:00 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:39 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-2-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 01/13] mm: use add_page_to_lru_list()
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+This patch replaces the only open-coded lru list addition with
+add_page_to_lru_list().
+
+Before this patch, we have:
+	update_lru_size()
+	list_move()
+
+After this patch, we have:
+	list_del()
+	add_page_to_lru_list()
+		update_lru_size()
+		list_add()
+
+The only side effect is that page->lru is temporarily poisoned
+after a page is deleted from its old list, which shouldn't be a
+problem.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ mm/vmscan.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index 9727dd8e2581..503fc5e1fe32 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -1850,8 +1850,8 @@ static unsigned noinline_for_stack move_pages_to_lru(struct lruvec *lruvec,
+ 	while (!list_empty(list)) {
+ 		page = lru_to_page(list);
+ 		VM_BUG_ON_PAGE(PageLRU(page), page);
++		list_del(&page->lru);
+ 		if (unlikely(!page_evictable(page))) {
+-			list_del(&page->lru);
+ 			spin_unlock_irq(&pgdat->lru_lock);
+ 			putback_lru_page(page);
+ 			spin_lock_irq(&pgdat->lru_lock);
+@@ -1862,9 +1862,7 @@ static unsigned noinline_for_stack move_pages_to_lru(struct lruvec *lruvec,
+ 		SetPageLRU(page);
+ 		lru = page_lru(page);
+ 
+-		nr_pages = thp_nr_pages(page);
+-		update_lru_size(lruvec, lru, page_zonenum(page), nr_pages);
+-		list_move(&page->lru, &lruvec->lists[lru]);
++		add_page_to_lru_list(page, lruvec, lru);
+ 
+ 		if (put_page_testzero(page)) {
+ 			__ClearPageLRU(page);
+@@ -1878,6 +1876,7 @@ static unsigned noinline_for_stack move_pages_to_lru(struct lruvec *lruvec,
+ 			} else
+ 				list_add(&page->lru, &pages_to_free);
+ 		} else {
++			nr_pages = thp_nr_pages(page);
+ 			nr_moved += nr_pages;
+ 			if (PageActive(page))
+ 				workingset_age_nonresident(lruvec, nr_pages);
+
+From patchwork Fri Sep 18 03:00:40 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783919
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 161FF618
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:06 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id D02A7238EE
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:05 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="uhe9Xs7m"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org D02A7238EE
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id 06DCC6B0073; Thu, 17 Sep 2020 23:01:03 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id F3DB38E0001; Thu, 17 Sep 2020 23:01:02 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id D8E456B0075; Thu, 17 Sep 2020 23:01:02 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0172.hostedemail.com
+ [216.40.44.172])
+	by kanga.kvack.org (Postfix) with ESMTP id BAA1C6B0073
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:02 -0400 (EDT)
+Received: from smtpin19.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay03.hostedemail.com (Postfix) with ESMTP id 8C1B28249980
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:02 +0000 (UTC)
+X-FDA: 77274680364.19.error43_4d0d8f127127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin19.hostedemail.com (Postfix) with ESMTP id 6BAEA1AD1B7
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:02 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,5970287ade648721,d41d8cd98f00b204,37sjkxwykcmq849rkyqyyqvo.mywvsx47-wwu5kmu.y1q@flex--yuzhao.bounces.google.com,,RULES_HIT:41:152:355:379:541:800:960:966:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1535:1541:1593:1594:1711:1730:1747:1777:1792:2196:2199:2393:2559:2562:2693:3138:3139:3140:3141:3142:3152:3352:3865:3871:4321:4385:5007:6261:6653:6742:8957:9010:9592:9969:10004:10400:11026:11658:11914:12043:12296:12297:12438:12555:12895:12986:13069:13311:13357:14096:14097:14181:14394:14659:14721:21080:21444:21627:30054:30070,0,RBL:209.85.219.202:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-66.100.201.100
+ 62.18.0.100;04ygrdssday5spqnygpd6eu433pbhocsa5bj5wzd75wrzm19sshttt5qszubu84.7ybtkt8g6ynz57nsusdhtth9gqe3sc9qmkuezyrm41rcswjyq9jzmz1qkbfdrmm.c-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:0:0:0,LFtime:23,LUA_SUMMARY:none
+X-HE-Tag: error43_4d0d8f127127
+X-Filterd-Recvd-Size: 5033
+Received: from mail-yb1-f202.google.com (mail-yb1-f202.google.com
+ [209.85.219.202])
+	by imf03.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:02 +0000 (UTC)
+Received: by mail-yb1-f202.google.com with SMTP id 140so2798254ybf.2
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:01 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=DFpxxJ/kEtxVo0cZzaDv049JSd9o65lBb+rEHr6i344=;
+        b=uhe9Xs7mtBzscpnO7yF3U+4MIVtZCHxNqpxEHtIXeMwLhLvt2SDYP0tVoo6HC4xD+W
+         T8UFMl0etXGRXhZaQBsVcHy+El+zDM7QlJ0hGnUAzLF4hfhzbDInRMeYTOqjfFNd60ZH
+         HhY41XfU6a8zt7cihboW9vmQ7OQqQjhicIQZpH7ToLLD9MRHD9RRhSn9bzTLe2SfDuGH
+         SJIGhmFfn4ys616614QgdqfST0P7nPCOEuqaBbe/iQvvHLLJdIJy3aoLlIDve4bRxL00
+         ZgRT7Jj42mdwuk8z1nzvKGSelnGbanOQescafc84VCW7x1aYLSk5nSIsMKNmEhcgP1f0
+         jn/g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=DFpxxJ/kEtxVo0cZzaDv049JSd9o65lBb+rEHr6i344=;
+        b=dywWVMfCBAgGqTSyI8qhdxsVoo3rc0a20N/7jLsC+oJXp33qpsneDIM3mWlcRqZmM5
+         MzsgD9ZrXZrUXc4TgyOrmWoM00THO69pmHCsNNLmilzbl0ogKpyQWjdtZpMjtLujtjUS
+         YZo8iZOIUdJXA1xl5qfhs9Vl+3eI88/eCXTINhcIwgf30GFFfK8P1j8ljI+q2NqC2xX3
+         fVMedcZk4QMi/uYcMg+ruBIrJ+34F7Vqjniyx9wpmj7eqPbfnTq4u6ePxMO/pARtkhbP
+         cGrV6lkvr6wZkJuTp8w9dCU2ET0yBNVrnhuZnlSafKBAw2HU+Yx5Ap1pa88AADB5/sh/
+         w55Q==
+X-Gm-Message-State: AOAM531G7gIukzxDm/exahOMP+rTI4mVQ4KjuD7yvDpG5bcLvOmE7nUa
+	XTFUOzmOz/WZv01nj1/w/884Tg5H+v0=
+X-Google-Smtp-Source: 
+ ABdhPJxvYNBbzfpbEV/xXQvUGEXI4OEuFOhsF5B7Jlz9/8AmN6ttG/IsDz0Z+wl6pHj8lTKer6JSac8C7o8=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a25:55c5:: with SMTP id
+ j188mr33342607ybb.417.1600398061369;
+ Thu, 17 Sep 2020 20:01:01 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:40 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-3-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 02/13] mm: use page_off_lru()
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+This patch replaces the only open-coded __ClearPageActive() with
+page_off_lru(). There is no open-coded __ClearPageUnevictable()s.
+
+Before this patch, we have:
+	__ClearPageActive()
+	add_page_to_lru_list()
+
+After this patch, we have:
+	page_off_lru()
+		if PageUnevictable()
+			__ClearPageUnevictable()
+		else if PageActive()
+			__ClearPageActive()
+	add_page_to_lru_list()
+
+Checking PageUnevictable() shouldn't be a problem because these two
+flags are mutually exclusive. Leaking either will trigger bad_page().
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ mm/vmscan.c | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index 503fc5e1fe32..f257d2f61574 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -1845,7 +1845,6 @@ static unsigned noinline_for_stack move_pages_to_lru(struct lruvec *lruvec,
+ 	int nr_pages, nr_moved = 0;
+ 	LIST_HEAD(pages_to_free);
+ 	struct page *page;
+-	enum lru_list lru;
+ 
+ 	while (!list_empty(list)) {
+ 		page = lru_to_page(list);
+@@ -1860,14 +1859,11 @@ static unsigned noinline_for_stack move_pages_to_lru(struct lruvec *lruvec,
+ 		lruvec = mem_cgroup_page_lruvec(page, pgdat);
+ 
+ 		SetPageLRU(page);
+-		lru = page_lru(page);
+-
+ 		add_page_to_lru_list(page, lruvec, lru);
+ 
+ 		if (put_page_testzero(page)) {
+ 			__ClearPageLRU(page);
+-			__ClearPageActive(page);
+-			del_page_from_lru_list(page, lruvec, lru);
++			del_page_from_lru_list(page, lruvec, page_off_lru(page));
+ 
+ 			if (unlikely(PageCompound(page))) {
+ 				spin_unlock_irq(&pgdat->lru_lock);
+
+From patchwork Fri Sep 18 03:00:41 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783921
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 00CB0618
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:08 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id 8D231206B6
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:07 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="JUmupfA4"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 8D231206B6
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id B6A206B0074; Thu, 17 Sep 2020 23:01:04 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id AF4AF6B0078; Thu, 17 Sep 2020 23:01:04 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id 96C566B007B; Thu, 17 Sep 2020 23:01:04 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0169.hostedemail.com
+ [216.40.44.169])
+	by kanga.kvack.org (Postfix) with ESMTP id 754A26B0074
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:04 -0400 (EDT)
+Received: from smtpin29.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay01.hostedemail.com (Postfix) with ESMTP id 3C5AC180AD811
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:04 +0000 (UTC)
+X-FDA: 77274680448.29.sleet98_2b059e727127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin29.hostedemail.com (Postfix) with ESMTP id 1A45C180868E0
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:04 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,8e876bf79b00352e,d41d8cd98f00b204,37ijkxwykcmu95aslzrzzrwp.nzxwty58-xxv6lnv.z2r@flex--yuzhao.bounces.google.com,,RULES_HIT:41:152:355:379:541:800:960:966:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1535:1542:1593:1594:1711:1730:1747:1777:1792:2196:2199:2393:2559:2562:3138:3139:3140:3141:3142:3152:3353:3865:3866:3874:4321:4385:4605:5007:6261:6653:6742:8957:9969:10004:10400:11026:11473:11638:11658:11914:12043:12296:12297:12438:12555:12895:12986:14096:14097:14181:14394:14659:14721:21080:21444:21627:21987:30054:30070,0,RBL:209.85.222.201:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-66.100.201.100
+ 62.18.0.100;04y88ot15kfy7wiuxhf9nbcumpx88oc359t4aaz9h9yxuc5b4efx98sfqrza48s.ph9q3f4ozg5ci6uhc4fpt89gu8djk8nss3tgx68ddkw5mdig5zcyg4p45z56zc4.h-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:0:0:0,LFtime:22,LUA_SUMMARY:none
+X-HE-Tag: sleet98_2b059e727127
+X-Filterd-Recvd-Size: 5650
+Received: from mail-qk1-f201.google.com (mail-qk1-f201.google.com
+ [209.85.222.201])
+	by imf38.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:03 +0000 (UTC)
+Received: by mail-qk1-f201.google.com with SMTP id s141so3424407qka.13
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:03 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=xgnYESlnPAgRXuNmUoKIpEseoXbDWRNbcLBaliwt4oc=;
+        b=JUmupfA4wraNNkt/3nQDRoRaUfUY18y3RzYhZnq0DDiJXlYJesex9t/1/0moJHN7v0
+         50pxg0398VUNoS2zmL94S71EK7TP61x8/Q7FBsofCF2wC7NulxTKKH3hMdhR7nFOJ/PC
+         uki9yZgG4KT9CzoqHNwgC7l7OkUR4FkQCLaBZwHr0QORR/rpMHGg/TdJWwEZCAtCS+8e
+         4b1oC3cA+Trzzm0/dv8Wx+97jp+3a3DAAkgXb8OwFXgLmTQBqSbxgIv/X9QFjfhX+pRs
+         K0DivOWlJ0PQTVXSvOGXUPE5sMtcoED2ZmrCJl1b9tqjC20mjmwqKnURY63+3efkm+wG
+         BY+A==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=xgnYESlnPAgRXuNmUoKIpEseoXbDWRNbcLBaliwt4oc=;
+        b=G1eEOEqSS+tdfvK2D+Lkmj+ge11WpRlF5kpLdH6vAe70zcRuwCpChAjJHtZP6Da7p5
+         LnS5OMC33c3jmlvkgXl0mcPdRTj8ZulgalDKQiIP68Fo/pQIS15wPYc1BikCulqjq19q
+         ENAhRg4AX7nobDPNm92i6HPLocgJSMsMCXXwXt6lyGvUMRxsd7QRO+7jtXCFFRfAT+o2
+         BM0I0sn+Ksy2P9CN+RiAd7yRSBfRaihLR1ppoQQ1sJGUT1SuaEIo2GFnc5wY4eGDQS8r
+         5+HeqGqo1n3IVSVHnaCs1PGtUp8/OBOzsWgR81K8FYdBdW3HQVqtcdaBqGd/YCWPUtAW
+         oxdA==
+X-Gm-Message-State: AOAM531pPMxwZ7v9ydQnu6MY4pyaRMMJ2JKCG3hIUQk5g18aUDvmDvuQ
+	2WIA7et/S2n21n+1xEBKYpN+YNC42Jg=
+X-Google-Smtp-Source: 
+ ABdhPJxi2d5rBcjBpXGVEN33YSeJpIGsvVd5FHEOFm+6Zvu+65+brOoWC+mQWMQVotpkrxRGOx14mPFQ4PA=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a05:6214:a6c:: with SMTP id
+ ef12mr32117792qvb.14.1600398062849; Thu, 17 Sep 2020 20:01:02 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:41 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-4-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 03/13] mm: move __ClearPageLRU() into page_off_lru()
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+Now we have a total of three places that free lru pages when their
+references become zero (after we drop the reference from isolation).
+
+Before this patch, they all do:
+	__ClearPageLRU()
+	page_off_lru()
+	del_page_from_lru_list()
+
+After this patch, they become:
+	page_off_lru()
+		__ClearPageLRU()
+	del_page_from_lru_list()
+
+This change should have no side effects.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/mm_inline.h | 1 +
+ mm/swap.c                 | 2 --
+ mm/vmscan.c               | 1 -
+ 3 files changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/include/linux/mm_inline.h b/include/linux/mm_inline.h
+index 8fc71e9d7bb0..be9418425e41 100644
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -92,6 +92,7 @@ static __always_inline enum lru_list page_off_lru(struct page *page)
+ {
+ 	enum lru_list lru;
+ 
++	__ClearPageLRU(page);
+ 	if (PageUnevictable(page)) {
+ 		__ClearPageUnevictable(page);
+ 		lru = LRU_UNEVICTABLE;
+diff --git a/mm/swap.c b/mm/swap.c
+index 40bf20a75278..8362083f00c9 100644
+--- a/mm/swap.c
++++ b/mm/swap.c
+@@ -86,7 +86,6 @@ static void __page_cache_release(struct page *page)
+ 		spin_lock_irqsave(&pgdat->lru_lock, flags);
+ 		lruvec = mem_cgroup_page_lruvec(page, pgdat);
+ 		VM_BUG_ON_PAGE(!PageLRU(page), page);
+-		__ClearPageLRU(page);
+ 		del_page_from_lru_list(page, lruvec, page_off_lru(page));
+ 		spin_unlock_irqrestore(&pgdat->lru_lock, flags);
+ 	}
+@@ -895,7 +894,6 @@ void release_pages(struct page **pages, int nr)
+ 
+ 			lruvec = mem_cgroup_page_lruvec(page, locked_pgdat);
+ 			VM_BUG_ON_PAGE(!PageLRU(page), page);
+-			__ClearPageLRU(page);
+ 			del_page_from_lru_list(page, lruvec, page_off_lru(page));
+ 		}
+ 
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index f257d2f61574..f9a186a96410 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -1862,7 +1862,6 @@ static unsigned noinline_for_stack move_pages_to_lru(struct lruvec *lruvec,
+ 		add_page_to_lru_list(page, lruvec, lru);
+ 
+ 		if (put_page_testzero(page)) {
+-			__ClearPageLRU(page);
+ 			del_page_from_lru_list(page, lruvec, page_off_lru(page));
+ 
+ 			if (unlikely(PageCompound(page))) {
+
+From patchwork Fri Sep 18 03:00:42 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783923
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 58DEF59D
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:10 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id 19C19206B7
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:10 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="jDtcgyrh"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 19C19206B7
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id 240426B0078; Thu, 17 Sep 2020 23:01:06 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id 12FF06B007B; Thu, 17 Sep 2020 23:01:06 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id F10606B007D; Thu, 17 Sep 2020 23:01:05 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0001.hostedemail.com
+ [216.40.44.1])
+	by kanga.kvack.org (Postfix) with ESMTP id D0B5D6B0078
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:05 -0400 (EDT)
+Received: from smtpin14.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay04.hostedemail.com (Postfix) with ESMTP id 9EC2F246E
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:05 +0000 (UTC)
+X-FDA: 77274680490.14.help62_620478327127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin14.hostedemail.com (Postfix) with ESMTP id 834B418229835
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:05 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,4b2bd3ba6b9bb352,d41d8cd98f00b204,38cjkxwykcmcb7cun1t11tyr.p1zyv07a-zzx8npx.14t@flex--yuzhao.bounces.google.com,,RULES_HIT:41:69:152:355:379:541:800:960:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1535:1542:1593:1594:1711:1730:1747:1777:1792:2393:2559:2562:3138:3139:3140:3141:3142:3152:3353:3865:3867:3870:3872:4250:4321:5007:6261:6653:6742:7875:9010:9012:9592:9969:10004:10400:11026:11658:11914:12043:12296:12297:12438:12555:12683:12895:12986:13161:13229:14110:14181:14394:14659:14721:21080:21444:21627:21990:30054:30070,0,RBL:209.85.219.201:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-66.100.201.100
+ 62.18.0.100;04y88e1ymztur4z3tdab3torxc56xocfs4bdtnpnpgngobytzecyey3tb168o3e.6i439q3a1i7at4q3cjeg9j8hfp99yhnw9n8xsrur58r6x1dm9hpcwac5kojkwso.y-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:0:0:0,LFtime:22,LUA_SUMMARY:none
+X-HE-Tag: help62_620478327127
+X-Filterd-Recvd-Size: 5765
+Received: from mail-yb1-f201.google.com (mail-yb1-f201.google.com
+ [209.85.219.201])
+	by imf02.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:05 +0000 (UTC)
+Received: by mail-yb1-f201.google.com with SMTP id k3so4073797ybp.1
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:04 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=w7mV5u1sVuL/HO4R09xmKV4wSajKsT9IQhDHQgEJXm8=;
+        b=jDtcgyrhMdZDz3izu8b4buHaQnBHiMajkKbH5BTR5O+yM3vyEJzubaWXG3osf+PdiA
+         WDIFMK6json2onX6FGRWm1wJFG4aJtqbEZCBQVMdTSxbX52x/ZxeUD6wCdCyTDvGF/W9
+         fHAhr4VdkC62NlHfxA9LHTUU9ojRZZRXc5CuhbqCHj+hov8eLDeFR9CaHt3hVHuvQ3EI
+         nHk9bPEOYH99f4NTwoV1jvoEj/cFFsoLfAAVtVtU6GcMuabk7KtE4Dcj35ROnppJCQWE
+         SnaNaAP0OJYZNobndXx0RCrPNI28FP1PtuIeYR2ro2oXPWKjVJ4E9T8Pam52iDeW313A
+         7nVA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=w7mV5u1sVuL/HO4R09xmKV4wSajKsT9IQhDHQgEJXm8=;
+        b=od3jlQNXM/5SJaQ0SkSlC+ojmCSyB/YAnLJhYa6t78sodQZhxvLmOe+0+PN8v7DdRj
+         6cvgtAF5hEL2f7qqEOOKc6zSJWrESpwOBgfoiagxD0CXieZNMsV2nlvTNDyP3LuJyOA4
+         Lka4iFiTRMnkruLzLVFw1JDlCK+k7M7X/cnSXzC2G/q7MgH1G3SXZyb+c0xvpK7UdKin
+         nDbzBfArUgbYWPYwxxlgizxPErlUJ8F6tvv/TL46i7ctzWDmCF+vT/QLtq+ilXJxMFX2
+         aVFAyB92cV4NS37H2NFYro3J2p2EXY56HGECVgEX/3n0kvtKbtQ4oZGqJ8YTt3a70Q00
+         Cozg==
+X-Gm-Message-State: AOAM532uPUyWyOIm7nFm5lbzbtniCSQAgomBvaGdZmWZtfeW9Hxb+Xls
+	YbviQHAZjT9LoCGs7VZ1dIf4B5xGinw=
+X-Google-Smtp-Source: 
+ ABdhPJxtkD2+YD/H021PF6gHpoN5EAhvy1+iGadjOw2IU9M8snsBGioGmQ4RZZk0fpZsAbdO7JC3AOTK8pI=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a25:d848:: with SMTP id
+ p69mr421664ybg.414.1600398064327;
+ Thu, 17 Sep 2020 20:01:04 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:42 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-5-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 04/13] mm: shuffle lru list addition and deletion functions
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+This change should have no side effects.
+
+We want it only because we prefer to avoid forward declarations in
+the following patches.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/mm_inline.h | 42 +++++++++++++++++++--------------------
+ 1 file changed, 21 insertions(+), 21 deletions(-)
+
+diff --git a/include/linux/mm_inline.h b/include/linux/mm_inline.h
+index be9418425e41..bfa30c752804 100644
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -45,27 +45,6 @@ static __always_inline void update_lru_size(struct lruvec *lruvec,
+ #endif
+ }
+ 
+-static __always_inline void add_page_to_lru_list(struct page *page,
+-				struct lruvec *lruvec, enum lru_list lru)
+-{
+-	update_lru_size(lruvec, lru, page_zonenum(page), thp_nr_pages(page));
+-	list_add(&page->lru, &lruvec->lists[lru]);
+-}
+-
+-static __always_inline void add_page_to_lru_list_tail(struct page *page,
+-				struct lruvec *lruvec, enum lru_list lru)
+-{
+-	update_lru_size(lruvec, lru, page_zonenum(page), thp_nr_pages(page));
+-	list_add_tail(&page->lru, &lruvec->lists[lru]);
+-}
+-
+-static __always_inline void del_page_from_lru_list(struct page *page,
+-				struct lruvec *lruvec, enum lru_list lru)
+-{
+-	list_del(&page->lru);
+-	update_lru_size(lruvec, lru, page_zonenum(page), -thp_nr_pages(page));
+-}
+-
+ /**
+  * page_lru_base_type - which LRU list type should a page be on?
+  * @page: the page to test
+@@ -126,4 +105,25 @@ static __always_inline enum lru_list page_lru(struct page *page)
+ 	}
+ 	return lru;
+ }
++
++static __always_inline void add_page_to_lru_list(struct page *page,
++				struct lruvec *lruvec, enum lru_list lru)
++{
++	update_lru_size(lruvec, lru, page_zonenum(page), thp_nr_pages(page));
++	list_add(&page->lru, &lruvec->lists[lru]);
++}
++
++static __always_inline void add_page_to_lru_list_tail(struct page *page,
++				struct lruvec *lruvec, enum lru_list lru)
++{
++	update_lru_size(lruvec, lru, page_zonenum(page), thp_nr_pages(page));
++	list_add_tail(&page->lru, &lruvec->lists[lru]);
++}
++
++static __always_inline void del_page_from_lru_list(struct page *page,
++				struct lruvec *lruvec, enum lru_list lru)
++{
++	list_del(&page->lru);
++	update_lru_size(lruvec, lru, page_zonenum(page), -thp_nr_pages(page));
++}
+ #endif
+
+From patchwork Fri Sep 18 03:00:43 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783925
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 5C39759D
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:13 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id 0950E206B6
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:12 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="GcBDKNFK"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 0950E206B6
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id 945088E0003; Thu, 17 Sep 2020 23:01:07 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id 881958E0001; Thu, 17 Sep 2020 23:01:07 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id 6642E8E0003; Thu, 17 Sep 2020 23:01:07 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0203.hostedemail.com
+ [216.40.44.203])
+	by kanga.kvack.org (Postfix) with ESMTP id 44C288E0001
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:07 -0400 (EDT)
+Received: from smtpin16.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay02.hostedemail.com (Postfix) with ESMTP id 123DC3629
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:07 +0000 (UTC)
+X-FDA: 77274680574.16.brake73_3a0910427127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin16.hostedemail.com (Postfix) with ESMTP id E7172100372E0
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:06 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,02bab604ca6ac263,d41d8cd98f00b204,38sjkxwykcmgc8dvo2u22uzs.q20zw18b-00y9oqy.25u@flex--yuzhao.bounces.google.com,,RULES_HIT:2:41:69:152:355:379:541:800:960:966:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1535:1593:1594:1605:1606:1730:1747:1777:1792:2196:2198:2199:2200:2393:2559:2562:2731:2898:3138:3139:3140:3141:3142:3152:3865:3866:3867:3868:3870:3871:3872:3874:4119:4321:4385:4605:5007:6261:6653:6691:6742:7903:8957:9010:9012:9592:9969:10004:11026:11473:11658:11914:12043:12296:12297:12438:12555:12895:12986:13161:13229:14096:14097:14394:14659:21080:21444:21627:21740:30036:30054:30070,0,RBL:209.85.160.202:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-62.18.0.100
+ 66.100.201.100;04y898mrk5dnjcd3p54eegpcb75yxycjzkxjc14osfwwaeo37r9pihkwkqyrm54.msntj6emt3wg9fn6x48ihyf9yzi8ux3dgt5hcm999qe8qcknabpcyae6rpyue9k.y-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutra
+ l,Custom
+X-HE-Tag: brake73_3a0910427127
+X-Filterd-Recvd-Size: 8835
+Received: from mail-qt1-f202.google.com (mail-qt1-f202.google.com
+ [209.85.160.202])
+	by imf06.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:06 +0000 (UTC)
+Received: by mail-qt1-f202.google.com with SMTP id m13so3784094qtu.10
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:06 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=d0N2YNozj8FzBRJ6VQ0c28ZpuzKJvjKqya/hyG9SAss=;
+        b=GcBDKNFKsQeNSxhucTO0XJtY/nmuVgnmcwBGZjjhLtbAo/zHl78n+uIqOAXYw9Atc2
+         pdBj2q0PrqGhK1Ax5dmJkf52ecZq9oeG+d7hhc7Km/9ULwndyEN71/Sp6nzSoF9OJ2uT
+         6RCcKmhioRolb9jXu/oG1FZ5rEfVtyYOqNEq+2KJucS4VlNaZPGnnPDCr2yqdyDB7fbE
+         Yq6jZ6dXmC2gQJD7V0OJijyJIwBud4vVWs+1RP6zyvs+1u0C51lB52kJylZvoFmG8jrr
+         eCsSvRygARZuZZSx0mbpyPtpKOIdYDZj0pxHwox19Ko02Pa2BfamshM6dlvj+QQIxJ7o
+         pAZA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=d0N2YNozj8FzBRJ6VQ0c28ZpuzKJvjKqya/hyG9SAss=;
+        b=AagZukITQhgO09LmOubzc6/rcartP/196n5DETDec/cMJcP5eIxneHnGJZDD4vYySh
+         vpS+zalASClZxNelto34spekVwqlDMLd/0w48dMjECja+Zm6HX7WLzdsym4/3RgGGf8D
+         7Wd63fbtgh+qVAwJ7zof33a3YmUnDI7VQFwotkaGHAON2RQqObBagzQMygsS92cKSuoh
+         dMAHxVWoATS9jNEhhxcGWicj+weteg97vLMuAdiOr4/ZLp+67wy4P1JUpvZKhCvmWo1n
+         +0OFAjYGoFr/O+lecEXPVvs5AU/BZvu3Yvf/N1OcfhMVqaZ7fdqaypbINAnBXTWhdiGl
+         ulVQ==
+X-Gm-Message-State: AOAM531pLLZ7rqSeRUUuXg2z1SkEACXaZE2OfXwmNj1+W20u8my3OYOD
+	Okjhl0atCwhZI6No0bHTIOuqoHci5ng=
+X-Google-Smtp-Source: 
+ ABdhPJzCIN4MKgnxw+rBMXtIM13RkiIS+ijRbe2ZJA5M0lfk1sXC0F2KMwBDWUmal8mHOzCBeFjmgh3GjjE=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:ad4:5745:: with SMTP id
+ q5mr31479962qvx.29.1600398065725;
+ Thu, 17 Sep 2020 20:01:05 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:43 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-6-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 05/13] mm: don't pass enum lru_list to lru list addition
+ functions
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+The enum lru_list parameter to add_page_to_lru_list() and
+add_page_to_lru_list_tail() is redundant in the sense that it can
+be extracted from the struct page parameter by page_lru().
+
+A caveat is that we need to make sure PageActive() or
+PageUnevictable() is correctly set or cleared before calling
+these two functions. And they are indeed.
+
+This change should have no side effects.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/mm_inline.h |  8 ++++++--
+ mm/swap.c                 | 18 ++++++++----------
+ mm/vmscan.c               |  6 ++----
+ 3 files changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/include/linux/mm_inline.h b/include/linux/mm_inline.h
+index bfa30c752804..199ff51bf2a0 100644
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -107,15 +107,19 @@ static __always_inline enum lru_list page_lru(struct page *page)
+ }
+ 
+ static __always_inline void add_page_to_lru_list(struct page *page,
+-				struct lruvec *lruvec, enum lru_list lru)
++				struct lruvec *lruvec)
+ {
++	enum lru_list lru = page_lru(page);
++
+ 	update_lru_size(lruvec, lru, page_zonenum(page), thp_nr_pages(page));
+ 	list_add(&page->lru, &lruvec->lists[lru]);
+ }
+ 
+ static __always_inline void add_page_to_lru_list_tail(struct page *page,
+-				struct lruvec *lruvec, enum lru_list lru)
++				struct lruvec *lruvec)
+ {
++	enum lru_list lru = page_lru(page);
++
+ 	update_lru_size(lruvec, lru, page_zonenum(page), thp_nr_pages(page));
+ 	list_add_tail(&page->lru, &lruvec->lists[lru]);
+ }
+diff --git a/mm/swap.c b/mm/swap.c
+index 8362083f00c9..8d0e31d43852 100644
+--- a/mm/swap.c
++++ b/mm/swap.c
+@@ -238,7 +238,7 @@ static void pagevec_move_tail_fn(struct page *page, struct lruvec *lruvec,
+ 	if (PageLRU(page) && !PageUnevictable(page)) {
+ 		del_page_from_lru_list(page, lruvec, page_lru(page));
+ 		ClearPageActive(page);
+-		add_page_to_lru_list_tail(page, lruvec, page_lru(page));
++		add_page_to_lru_list_tail(page, lruvec);
+ 		(*pgmoved) += thp_nr_pages(page);
+ 	}
+ }
+@@ -322,8 +322,7 @@ static void __activate_page(struct page *page, struct lruvec *lruvec,
+ 
+ 		del_page_from_lru_list(page, lruvec, lru);
+ 		SetPageActive(page);
+-		lru += LRU_ACTIVE;
+-		add_page_to_lru_list(page, lruvec, lru);
++		add_page_to_lru_list(page, lruvec);
+ 		trace_mm_lru_activate(page);
+ 
+ 		__count_vm_events(PGACTIVATE, nr_pages);
+@@ -555,14 +554,14 @@ static void lru_deactivate_file_fn(struct page *page, struct lruvec *lruvec,
+ 		 * It can make readahead confusing.  But race window
+ 		 * is _really_ small and  it's non-critical problem.
+ 		 */
+-		add_page_to_lru_list(page, lruvec, lru);
++		add_page_to_lru_list(page, lruvec);
+ 		SetPageReclaim(page);
+ 	} else {
+ 		/*
+ 		 * The page's writeback ends up during pagevec
+ 		 * We moves tha page into tail of inactive.
+ 		 */
+-		add_page_to_lru_list_tail(page, lruvec, lru);
++		add_page_to_lru_list_tail(page, lruvec);
+ 		__count_vm_events(PGROTATED, nr_pages);
+ 	}
+ 
+@@ -583,7 +582,7 @@ static void lru_deactivate_fn(struct page *page, struct lruvec *lruvec,
+ 		del_page_from_lru_list(page, lruvec, lru + LRU_ACTIVE);
+ 		ClearPageActive(page);
+ 		ClearPageReferenced(page);
+-		add_page_to_lru_list(page, lruvec, lru);
++		add_page_to_lru_list(page, lruvec);
+ 
+ 		__count_vm_events(PGDEACTIVATE, nr_pages);
+ 		__count_memcg_events(lruvec_memcg(lruvec), PGDEACTIVATE,
+@@ -609,7 +608,7 @@ static void lru_lazyfree_fn(struct page *page, struct lruvec *lruvec,
+ 		 * anonymous pages
+ 		 */
+ 		ClearPageSwapBacked(page);
+-		add_page_to_lru_list(page, lruvec, LRU_INACTIVE_FILE);
++		add_page_to_lru_list(page, lruvec);
+ 
+ 		__count_vm_events(PGLAZYFREE, nr_pages);
+ 		__count_memcg_events(lruvec_memcg(lruvec), PGLAZYFREE,
+@@ -955,8 +954,7 @@ void lru_add_page_tail(struct page *page, struct page *page_tail,
+ 		 * Put page_tail on the list at the correct position
+ 		 * so they all end up in order.
+ 		 */
+-		add_page_to_lru_list_tail(page_tail, lruvec,
+-					  page_lru(page_tail));
++		add_page_to_lru_list_tail(page_tail, lruvec);
+ 	}
+ }
+ #endif /* CONFIG_TRANSPARENT_HUGEPAGE */
+@@ -1011,7 +1009,7 @@ static void __pagevec_lru_add_fn(struct page *page, struct lruvec *lruvec,
+ 			__count_vm_events(UNEVICTABLE_PGCULLED, nr_pages);
+ 	}
+ 
+-	add_page_to_lru_list(page, lruvec, lru);
++	add_page_to_lru_list(page, lruvec);
+ 	trace_mm_lru_insertion(page, lru);
+ }
+ 
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index f9a186a96410..895be9fb96ec 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -1859,7 +1859,7 @@ static unsigned noinline_for_stack move_pages_to_lru(struct lruvec *lruvec,
+ 		lruvec = mem_cgroup_page_lruvec(page, pgdat);
+ 
+ 		SetPageLRU(page);
+-		add_page_to_lru_list(page, lruvec, lru);
++		add_page_to_lru_list(page, lruvec);
+ 
+ 		if (put_page_testzero(page)) {
+ 			del_page_from_lru_list(page, lruvec, page_off_lru(page));
+@@ -4276,12 +4276,10 @@ void check_move_unevictable_pages(struct pagevec *pvec)
+ 			continue;
+ 
+ 		if (page_evictable(page)) {
+-			enum lru_list lru = page_lru_base_type(page);
+-
+ 			VM_BUG_ON_PAGE(PageActive(page), page);
+ 			ClearPageUnevictable(page);
+ 			del_page_from_lru_list(page, lruvec, LRU_UNEVICTABLE);
+-			add_page_to_lru_list(page, lruvec, lru);
++			add_page_to_lru_list(page, lruvec);
+ 			pgrescued += nr_pages;
+ 		}
+ 	}
+
+From patchwork Fri Sep 18 03:00:44 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783927
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id B5971618
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:15 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id 6F21323119
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:15 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="Dw/BE/Q/"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 6F21323119
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id D15DB8E0005; Thu, 17 Sep 2020 23:01:08 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id C9DFC8E0001; Thu, 17 Sep 2020 23:01:08 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id A2C1B8E0005; Thu, 17 Sep 2020 23:01:08 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0248.hostedemail.com
+ [216.40.44.248])
+	by kanga.kvack.org (Postfix) with ESMTP id 802398E0001
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:08 -0400 (EDT)
+Received: from smtpin01.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay01.hostedemail.com (Postfix) with ESMTP id 404D0180AD811
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:08 +0000 (UTC)
+X-FDA: 77274680616.01.stop80_160c17827127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin01.hostedemail.com (Postfix) with ESMTP id 1E2761004BA70
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:08 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,8e2cb4bb8419ccb3,d41d8cd98f00b204,38yjkxwykcmoeafxq4w44w1u.s421y3ad-220bqs0.47w@flex--yuzhao.bounces.google.com,,RULES_HIT:41:152:355:379:541:800:960:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1535:1542:1593:1594:1711:1730:1747:1777:1792:1801:2393:2559:2562:3138:3139:3140:3141:3142:3152:3353:3865:3870:3871:3872:3874:4321:4605:5007:6119:6261:6653:6742:7903:8957:9969:10004:10400:11026:11232:11658:11914:12043:12114:12296:12297:12438:12555:12895:12986:13161:13229:14096:14097:14181:14394:14659:14721:21080:21444:21627:30036:30054:30070,0,RBL:209.85.219.201:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-66.100.201.100
+ 62.18.0.100;04yf9iwrxka3ijb5bacoqr4jhtmk8yc6buacn4o49mxccrsbth3gqgxj7nkwfnz.813fic75u19icxp6mo7kfu66suym95fqb9g7m1bdjceoi8ekdcbduwmtczkfxfx.y-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:0:0:0,LFtime:22,LUA_SUMMARY:none
+X-HE-Tag: stop80_160c17827127
+X-Filterd-Recvd-Size: 5660
+Received: from mail-yb1-f201.google.com (mail-yb1-f201.google.com
+ [209.85.219.201])
+	by imf30.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:07 +0000 (UTC)
+Received: by mail-yb1-f201.google.com with SMTP id f185so4004155ybf.17
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:07 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=4MOFrrHR2/UhZD8wnGs0ogWSv0e594oXOmpHs7V/Hlc=;
+        b=Dw/BE/Q/G5v7r7p+x51pZfrNQwT6ly7+dXeOKeyFItGyUFUkIUvZVYbl/2GhRz9B5T
+         4EDzpTx9xwcDSkMvD4RmnNW6/nCZcAjD1C8bv7jZeW3LHYuhVAjSofCxPTb/sJvrFqkb
+         XaC9tNEde7FVCTlIR39u+GG4+ga57fTsfOXaPb6/W9TU9ebCZnKpGjfeQ0+KAajoU1V4
+         JexNO6nH/0XLaMxu1Wzu0g7z/+KB3XTivJ8zth62HMCUc7HtsbWrnRg9q0BJU0Ku3RwP
+         tTGf9lCuOhl4wZDotKm7LIyzwDkomMVN2j58x7knCFbS1f+ICgjaHXX+oFBr5j4R5VI0
+         bqqw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=4MOFrrHR2/UhZD8wnGs0ogWSv0e594oXOmpHs7V/Hlc=;
+        b=akNhH4wy+mz0bi6S1AxzIPzQ17vDSKrllzTnlJbWlkdmgSkBfmgYJuEdPQiKUcT4Nn
+         nNf+mQs5rf8htv6l2JKyvuUIYntTkKC0a9z3EiADGm0S365ngiNghuNDLbNi/kmV09lt
+         P3IhSopZByKbBAF+0nMOj3GQwddPSU0jXIbP7kn7HtvRtrtM6wGkJER0HgZrlB4NqFa2
+         5rKfVoSZ3vTvAsE8QBkuEl5gJTqf+kNjgsX0zol/ekOxjRVFykSGrojaqmJ4xXy7xTZP
+         rORdWz2hT4KIt6A5NrlPlXdG3zu3lgy71I0RUnIPzKm5JjCCZ12OupOBr0NtPeM2q3M/
+         yXYQ==
+X-Gm-Message-State: AOAM533jcm/ZIGHDx2PpXeYi+IbWMAK0iVp1U1VkOVKIUVUQjLi7MC7+
+	aKwgnjY4G0oiW9NdwzwXMCAqb1LVZho=
+X-Google-Smtp-Source: 
+ ABdhPJyAJfQ43oGswfhp/4VcfkX+7z1s2wZn7/IZ4YurRAP4MdZ31Dvya5HTaLX6dy1NRUu80RMWCsW5Yos=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a5b:d09:: with SMTP id
+ y9mr15575625ybp.258.1600398067055;
+ Thu, 17 Sep 2020 20:01:07 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:44 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-7-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 06/13] mm: don't pass enum lru_list to
+ trace_mm_lru_insertion()
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+The parameter is redundant in the sense that it can be extracted
+from the struct page parameter by page_lru() correctly.
+
+This change should have no side effects.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/trace/events/pagemap.h | 11 ++++-------
+ mm/swap.c                      |  5 +----
+ 2 files changed, 5 insertions(+), 11 deletions(-)
+
+diff --git a/include/trace/events/pagemap.h b/include/trace/events/pagemap.h
+index 8fd1babae761..e1735fe7c76a 100644
+--- a/include/trace/events/pagemap.h
++++ b/include/trace/events/pagemap.h
+@@ -27,24 +27,21 @@
+ 
+ TRACE_EVENT(mm_lru_insertion,
+ 
+-	TP_PROTO(
+-		struct page *page,
+-		int lru
+-	),
++	TP_PROTO(struct page *page),
+ 
+-	TP_ARGS(page, lru),
++	TP_ARGS(page),
+ 
+ 	TP_STRUCT__entry(
+ 		__field(struct page *,	page	)
+ 		__field(unsigned long,	pfn	)
+-		__field(int,		lru	)
++		__field(enum lru_list,	lru	)
+ 		__field(unsigned long,	flags	)
+ 	),
+ 
+ 	TP_fast_assign(
+ 		__entry->page	= page;
+ 		__entry->pfn	= page_to_pfn(page);
+-		__entry->lru	= lru;
++		__entry->lru	= page_lru(page);
+ 		__entry->flags	= trace_pagemap_flags(page);
+ 	),
+ 
+diff --git a/mm/swap.c b/mm/swap.c
+index 8d0e31d43852..3c89a7276359 100644
+--- a/mm/swap.c
++++ b/mm/swap.c
+@@ -962,7 +962,6 @@ void lru_add_page_tail(struct page *page, struct page *page_tail,
+ static void __pagevec_lru_add_fn(struct page *page, struct lruvec *lruvec,
+ 				 void *arg)
+ {
+-	enum lru_list lru;
+ 	int was_unevictable = TestClearPageUnevictable(page);
+ 	int nr_pages = thp_nr_pages(page);
+ 
+@@ -998,11 +997,9 @@ static void __pagevec_lru_add_fn(struct page *page, struct lruvec *lruvec,
+ 	smp_mb__after_atomic();
+ 
+ 	if (page_evictable(page)) {
+-		lru = page_lru(page);
+ 		if (was_unevictable)
+ 			__count_vm_events(UNEVICTABLE_PGRESCUED, nr_pages);
+ 	} else {
+-		lru = LRU_UNEVICTABLE;
+ 		ClearPageActive(page);
+ 		SetPageUnevictable(page);
+ 		if (!was_unevictable)
+@@ -1010,7 +1007,7 @@ static void __pagevec_lru_add_fn(struct page *page, struct lruvec *lruvec,
+ 	}
+ 
+ 	add_page_to_lru_list(page, lruvec);
+-	trace_mm_lru_insertion(page, lru);
++	trace_mm_lru_insertion(page);
+ }
+ 
+ /*
+
+From patchwork Fri Sep 18 03:00:45 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783929
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 2AC60618
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:18 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id C1A432396D
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:17 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="I56cheOd"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org C1A432396D
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id 35182900002; Thu, 17 Sep 2020 23:01:10 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id 2DA358E0001; Thu, 17 Sep 2020 23:01:10 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id 1A54B900002; Thu, 17 Sep 2020 23:01:10 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0236.hostedemail.com
+ [216.40.44.236])
+	by kanga.kvack.org (Postfix) with ESMTP id E79FF8E0001
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:09 -0400 (EDT)
+Received: from smtpin09.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay04.hostedemail.com (Postfix) with ESMTP id B9D882492
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:09 +0000 (UTC)
+X-FDA: 77274680658.09.cart61_050e72327127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin09.hostedemail.com (Postfix) with ESMTP id 9F99A180AD811
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:09 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,57561e5368cb1be7,d41d8cd98f00b204,39cjkxwykcmsfbgyr5x55x2v.t532z4be-331crt1.58x@flex--yuzhao.bounces.google.com,,RULES_HIT:1:2:41:69:152:355:379:541:800:960:966:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1593:1594:1605:1730:1747:1777:1792:2196:2198:2199:2200:2393:2559:2562:2736:3138:3139:3140:3141:3142:3152:3865:3867:3868:3870:3871:3872:3874:4050:4321:4385:4605:5007:6261:6653:6742:7903:8957:9592:9969:10004:11026:11233:11473:11658:11914:12043:12114:12296:12297:12438:12555:12895:12986:13161:13229:14096:14097:14394:14659:21080:21444:21451:21627:21987:21990:30036:30054,0,RBL:209.85.222.201:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-62.18.0.100
+ 66.100.201.100;04yrtr4a9n45eccb5xtc61wxdnajhyc7zapxyf6gnqw8i4qp3xh9cgouukwt8n5.ywf7q1pfbc3cis843iyedsiefnawreu49ejr7yygh3zunjqk3c7b6o4x3qnadpx.c-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:
+ 0:0:0,LF
+X-HE-Tag: cart61_050e72327127
+X-Filterd-Recvd-Size: 10816
+Received: from mail-qk1-f201.google.com (mail-qk1-f201.google.com
+ [209.85.222.201])
+	by imf29.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:09 +0000 (UTC)
+Received: by mail-qk1-f201.google.com with SMTP id m203so3400335qke.16
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:08 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=m9SV8To9giQpZ6vlTURw1wnUtOeRuWbkRD6idl4rWic=;
+        b=I56cheOdKpadMiISI8D3cG12+YcWjTwNmGhUtTv6Hp9t9gRU4RRdYiIHsk/0jFXmyH
+         cWLQJMpbcUAEISgmwVnWJRx8Pu5moOnRNObl8NrzMuG10t1uEVB/oDN6VbizahrHeDXp
+         s5DdATUvkw8bZSQsKZpXhor/grLA+VmtK7Fwrpwgeoaj5Fi/6zRjPs29QE5WD+Qp3mjC
+         0c0DuuFKEYWQ4Bq4OBTGv1YstJIngd3P3uXY4KZulaz6XmM9C7zeHzTpFORS90uJ1AE2
+         MaMtBpBIKEb6OZ8KhFdnhm/F2mMDsPCbQpvQAsSnjz1u8pqDrunMQS6E4nbchxMKsV23
+         YXmA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=m9SV8To9giQpZ6vlTURw1wnUtOeRuWbkRD6idl4rWic=;
+        b=P/GLVfwELfGzZEOWOvyXwlQwFKUMRYFds0sXNPYTBq+N8J8cxQpr1jI6Nkj5QEXfKq
+         /Bk4FmaTBVClXh0ejRlA5/RQeq6gSYtZofOKqek+uF4kazvdZ8OgkOe22fyS57npHTnq
+         p/kp1AU/qnOXtBlZrRS+tl9AaH/hQulXCwLRq5vndsr1N+kCh3pQ6MIQw4z84HS4Cz/R
+         wpeLpA5Fh00coxhge7xlYx/FU0V8qPsESGPQUtP0ygDbLLPu6UGC2SviLlQV4paLD3oY
+         gcrfYl8QbIo9bqvqOdEvM2AQtI18l6iF0KZ1E2uNlz2NabYDNX9d86Yoqh+oJWQEg4sV
+         QSwQ==
+X-Gm-Message-State: AOAM531C+Ne9MX69JW4sz68PBMVpIEVe8xB6WKYitCgxrOjckrPLzlPz
+	5IZ+W5NVVyvVSTSGi7rP5kznt/yzqZ8=
+X-Google-Smtp-Source: 
+ ABdhPJxSJ6H+qBap6jb3jm+pH6Y0Qsceyc8/VfY7SdRpbY0psSRlj8jZwDgLG/bk2SjMsAhDHvZHEM0GqJw=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a0c:c407:: with SMTP id
+ r7mr15393093qvi.36.1600398068453;
+ Thu, 17 Sep 2020 20:01:08 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:45 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-8-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 07/13] mm: don't pass enum lru_list to
+ del_page_from_lru_list()
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+The parameter is redundant in the sense that it can be extracted
+from the struct page parameter by page_lru().
+
+To do this, we need to make sure PageActive() or PageUnevictable()
+is correctly set or cleared before calling the function. In
+check_move_unevictable_pages(), we have:
+	ClearPageUnevictable()
+	del_page_from_lru_list(lru_list = LRU_UNEVICTABLE)
+
+And we need to reorder them to make page_lru() return
+LRU_UNEVICTABLE:
+	del_page_from_lru_list()
+		page_lru()
+	ClearPageUnevictable()
+
+We also need to deal with the deletions on releasing paths that
+clear PageLRU() and PageActive()/PageUnevictable():
+	del_page_from_lru_list(lru_list = page_off_lru())
+
+It's done by another recording like this:
+	del_page_from_lru_list()
+		page_lru()
+	page_off_lru()
+
+In both cases, the recording should have no side effects.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/mm_inline.h |  5 +++--
+ mm/compaction.c           |  2 +-
+ mm/mlock.c                |  2 +-
+ mm/swap.c                 | 26 ++++++++++----------------
+ mm/vmscan.c               |  8 ++++----
+ 5 files changed, 19 insertions(+), 24 deletions(-)
+
+diff --git a/include/linux/mm_inline.h b/include/linux/mm_inline.h
+index 199ff51bf2a0..03796021f0fe 100644
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -125,9 +125,10 @@ static __always_inline void add_page_to_lru_list_tail(struct page *page,
+ }
+ 
+ static __always_inline void del_page_from_lru_list(struct page *page,
+-				struct lruvec *lruvec, enum lru_list lru)
++				struct lruvec *lruvec)
+ {
+ 	list_del(&page->lru);
+-	update_lru_size(lruvec, lru, page_zonenum(page), -thp_nr_pages(page));
++	update_lru_size(lruvec, page_lru(page), page_zonenum(page),
++			-thp_nr_pages(page));
+ }
+ #endif
+diff --git a/mm/compaction.c b/mm/compaction.c
+index 176dcded298e..ec4af21d2867 100644
+--- a/mm/compaction.c
++++ b/mm/compaction.c
+@@ -1006,7 +1006,7 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
+ 			low_pfn += compound_nr(page) - 1;
+ 
+ 		/* Successfully isolated */
+-		del_page_from_lru_list(page, lruvec, page_lru(page));
++		del_page_from_lru_list(page, lruvec);
+ 		mod_node_page_state(page_pgdat(page),
+ 				NR_ISOLATED_ANON + page_is_file_lru(page),
+ 				thp_nr_pages(page));
+diff --git a/mm/mlock.c b/mm/mlock.c
+index 93ca2bf30b4f..647487912d0a 100644
+--- a/mm/mlock.c
++++ b/mm/mlock.c
+@@ -114,7 +114,7 @@ static bool __munlock_isolate_lru_page(struct page *page, bool getpage)
+ 		if (getpage)
+ 			get_page(page);
+ 		ClearPageLRU(page);
+-		del_page_from_lru_list(page, lruvec, page_lru(page));
++		del_page_from_lru_list(page, lruvec);
+ 		return true;
+ 	}
+ 
+diff --git a/mm/swap.c b/mm/swap.c
+index 3c89a7276359..8bbeabc582c1 100644
+--- a/mm/swap.c
++++ b/mm/swap.c
+@@ -86,7 +86,8 @@ static void __page_cache_release(struct page *page)
+ 		spin_lock_irqsave(&pgdat->lru_lock, flags);
+ 		lruvec = mem_cgroup_page_lruvec(page, pgdat);
+ 		VM_BUG_ON_PAGE(!PageLRU(page), page);
+-		del_page_from_lru_list(page, lruvec, page_off_lru(page));
++		del_page_from_lru_list(page, lruvec);
++		page_off_lru(page);
+ 		spin_unlock_irqrestore(&pgdat->lru_lock, flags);
+ 	}
+ }
+@@ -236,7 +237,7 @@ static void pagevec_move_tail_fn(struct page *page, struct lruvec *lruvec,
+ 	int *pgmoved = arg;
+ 
+ 	if (PageLRU(page) && !PageUnevictable(page)) {
+-		del_page_from_lru_list(page, lruvec, page_lru(page));
++		del_page_from_lru_list(page, lruvec);
+ 		ClearPageActive(page);
+ 		add_page_to_lru_list_tail(page, lruvec);
+ 		(*pgmoved) += thp_nr_pages(page);
+@@ -317,10 +318,9 @@ static void __activate_page(struct page *page, struct lruvec *lruvec,
+ 			    void *arg)
+ {
+ 	if (PageLRU(page) && !PageActive(page) && !PageUnevictable(page)) {
+-		int lru = page_lru_base_type(page);
+ 		int nr_pages = thp_nr_pages(page);
+ 
+-		del_page_from_lru_list(page, lruvec, lru);
++		del_page_from_lru_list(page, lruvec);
+ 		SetPageActive(page);
+ 		add_page_to_lru_list(page, lruvec);
+ 		trace_mm_lru_activate(page);
+@@ -527,8 +527,7 @@ void lru_cache_add_inactive_or_unevictable(struct page *page,
+ static void lru_deactivate_file_fn(struct page *page, struct lruvec *lruvec,
+ 			      void *arg)
+ {
+-	int lru;
+-	bool active;
++	bool active = PageActive(page);
+ 	int nr_pages = thp_nr_pages(page);
+ 
+ 	if (!PageLRU(page))
+@@ -541,10 +540,7 @@ static void lru_deactivate_file_fn(struct page *page, struct lruvec *lruvec,
+ 	if (page_mapped(page))
+ 		return;
+ 
+-	active = PageActive(page);
+-	lru = page_lru_base_type(page);
+-
+-	del_page_from_lru_list(page, lruvec, lru + active);
++	del_page_from_lru_list(page, lruvec);
+ 	ClearPageActive(page);
+ 	ClearPageReferenced(page);
+ 
+@@ -576,10 +572,9 @@ static void lru_deactivate_fn(struct page *page, struct lruvec *lruvec,
+ 			    void *arg)
+ {
+ 	if (PageLRU(page) && PageActive(page) && !PageUnevictable(page)) {
+-		int lru = page_lru_base_type(page);
+ 		int nr_pages = thp_nr_pages(page);
+ 
+-		del_page_from_lru_list(page, lruvec, lru + LRU_ACTIVE);
++		del_page_from_lru_list(page, lruvec);
+ 		ClearPageActive(page);
+ 		ClearPageReferenced(page);
+ 		add_page_to_lru_list(page, lruvec);
+@@ -595,11 +590,9 @@ static void lru_lazyfree_fn(struct page *page, struct lruvec *lruvec,
+ {
+ 	if (PageLRU(page) && PageAnon(page) && PageSwapBacked(page) &&
+ 	    !PageSwapCache(page) && !PageUnevictable(page)) {
+-		bool active = PageActive(page);
+ 		int nr_pages = thp_nr_pages(page);
+ 
+-		del_page_from_lru_list(page, lruvec,
+-				       LRU_INACTIVE_ANON + active);
++		del_page_from_lru_list(page, lruvec);
+ 		ClearPageActive(page);
+ 		ClearPageReferenced(page);
+ 		/*
+@@ -893,7 +886,8 @@ void release_pages(struct page **pages, int nr)
+ 
+ 			lruvec = mem_cgroup_page_lruvec(page, locked_pgdat);
+ 			VM_BUG_ON_PAGE(!PageLRU(page), page);
+-			del_page_from_lru_list(page, lruvec, page_off_lru(page));
++			del_page_from_lru_list(page, lruvec);
++			page_off_lru(page);
+ 		}
+ 
+ 		list_add(&page->lru, &pages_to_free);
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index 895be9fb96ec..47a4e8ba150f 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -1770,10 +1770,9 @@ int isolate_lru_page(struct page *page)
+ 		spin_lock_irq(&pgdat->lru_lock);
+ 		lruvec = mem_cgroup_page_lruvec(page, pgdat);
+ 		if (PageLRU(page)) {
+-			int lru = page_lru(page);
+ 			get_page(page);
+ 			ClearPageLRU(page);
+-			del_page_from_lru_list(page, lruvec, lru);
++			del_page_from_lru_list(page, lruvec);
+ 			ret = 0;
+ 		}
+ 		spin_unlock_irq(&pgdat->lru_lock);
+@@ -1862,7 +1861,8 @@ static unsigned noinline_for_stack move_pages_to_lru(struct lruvec *lruvec,
+ 		add_page_to_lru_list(page, lruvec);
+ 
+ 		if (put_page_testzero(page)) {
+-			del_page_from_lru_list(page, lruvec, page_off_lru(page));
++			del_page_from_lru_list(page, lruvec);
++			page_off_lru(page);
+ 
+ 			if (unlikely(PageCompound(page))) {
+ 				spin_unlock_irq(&pgdat->lru_lock);
+@@ -4277,8 +4277,8 @@ void check_move_unevictable_pages(struct pagevec *pvec)
+ 
+ 		if (page_evictable(page)) {
+ 			VM_BUG_ON_PAGE(PageActive(page), page);
++			del_page_from_lru_list(page, lruvec);
+ 			ClearPageUnevictable(page);
+-			del_page_from_lru_list(page, lruvec, LRU_UNEVICTABLE);
+ 			add_page_to_lru_list(page, lruvec);
+ 			pgrescued += nr_pages;
+ 		}
+
+From patchwork Fri Sep 18 03:00:46 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783931
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 66F37618
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:20 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id 298DE238EE
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:20 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="WbBF/biW"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 298DE238EE
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id BB56E900003; Thu, 17 Sep 2020 23:01:11 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id B42E08E0001; Thu, 17 Sep 2020 23:01:11 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id 97151900003; Thu, 17 Sep 2020 23:01:11 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0020.hostedemail.com
+ [216.40.44.20])
+	by kanga.kvack.org (Postfix) with ESMTP id 70EB78E0001
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:11 -0400 (EDT)
+Received: from smtpin15.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay04.hostedemail.com (Postfix) with ESMTP id 3FA522C96
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:11 +0000 (UTC)
+X-FDA: 77274680742.15.grass50_310800127127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin15.hostedemail.com (Postfix) with ESMTP id 1E2711814B0C1
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:11 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,386732c8ab12369b,d41d8cd98f00b204,39sjkxwykcmwgchzs6y66y3w.u64305cf-442dsu2.69y@flex--yuzhao.bounces.google.com,,RULES_HIT:41:69:152:355:379:541:800:960:966:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1535:1543:1593:1594:1711:1730:1747:1777:1792:2196:2199:2282:2393:2559:2562:3138:3139:3140:3141:3142:3152:3354:3608:3865:3866:3867:3868:3871:3872:3874:4117:4250:4321:4385:4605:5007:6261:6653:6742:7875:8957:9010:9592:9969:10004:10400:11026:11473:11658:11914:12043:12114:12296:12297:12438:12555:12895:12986:14096:14097:14181:14394:14659:14721:21080:21444:21627:21987:21990:30054,0,RBL:209.85.219.201:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-62.18.0.100
+ 66.100.201.100;04y85t5uwogxnrwds9cokbbb48gqbop5xka6nw9e1qn97kjs4ypqx8qhd3jtrft.7zjsynr3gmjurw5kdo9jrsnfjyxmzcozs6er1j56x3eusb1i4a79s3np9np4w5k.r-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_ru
+ les:0:0:
+X-HE-Tag: grass50_310800127127
+X-Filterd-Recvd-Size: 6497
+Received: from mail-yb1-f201.google.com (mail-yb1-f201.google.com
+ [209.85.219.201])
+	by imf39.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:10 +0000 (UTC)
+Received: by mail-yb1-f201.google.com with SMTP id 207so3984435ybd.13
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:10 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=mgUvRZoNyo/y0AQ5WR2jz5tZr6t85cJbSfg1V582xDg=;
+        b=WbBF/biWXWgsyfQrPFvQ3vxOo+han7gBPOKVDaDU4vJiFk4GkLPWtgi2/g3SIc6Sm4
+         t3Uu+l1/J0OCujYFgUdgOOdQnLSuYKqjCbiVFAVL62xtqsR8AWYvU9xxCQbe5SNYfR7P
+         6qKIYnW/Nq+bYrVKiO/ZRYqZ9sujtxhKeqHLelTrl4oSZWzPFumT+IwW1EXoRdnknys4
+         9tdE11jEHtr50ERnioBOHFSTj/eepTvgUi5+qbGrY2XaOveyiAXErPRrap0CkToH0ECx
+         xdvml7aQA0VQtDWIbFHHojN2KjO7YQ6KHO6zMR5goFxSrxt+PJ5zaHkJ1IMNTqEdb9d2
+         DZ6A==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=mgUvRZoNyo/y0AQ5WR2jz5tZr6t85cJbSfg1V582xDg=;
+        b=Gjoe1/5O+iO2UO1xEn948gLTbcx5eIfmAIuvbjtMZtj9Xelectmp0CF+INeGY7wYK+
+         Sqglc+Ie1P/Wrj4UYwu8iaYwpKuWLZoi5w+VGhWJKoiGcepR1Cxud9qLU1bmOzxYSHto
+         HxCaLGfEKrYdn+kxL2kA90jLAj9OXdgEGVktYuKtHIxAqw6u/Tv/i0aieoukNaDnz75m
+         MjH62/n7WBBGLC+rZyZ2kTCpkJnKPSKj9OxiBQQvEk0Kxyk2D1Ym4a0swZVD4vUNcXZh
+         UFBwfk0sXiExH8nnW68nd6/NH9SZBBK57f+nAGoPAxpjd3DjsHxfTKqgWuCcPdLcM1dC
+         Z0AA==
+X-Gm-Message-State: AOAM531UHl+xDG6IUOOnFWaprj0tJl5BNhQ7b4kWM+v6zn64GLlp0lyg
+	9QOUnq0P4Cnx6a3WSj30h4cL6XzLoRg=
+X-Google-Smtp-Source: 
+ ABdhPJw/NMQTsr5clEF7UbuRxrpPr6jti09YZRwK5a69aAftHh4i/FzywDR2H/UoJQ1/f0Yitz79mnIXNPs=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a25:ad43:: with SMTP id
+ l3mr28473720ybe.157.1600398069895;
+ Thu, 17 Sep 2020 20:01:09 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:46 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-9-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 08/13] mm: rename page_off_lru() to __clear_page_lru_flags()
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+Rename the function according to what it really does. And make it
+return void since the return value is not needed anymore.
+
+If PageActive() and PageUnevictable() are both true, refuse to clear
+either and leave them to bad_page().
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/mm_inline.h | 29 ++++++++++-------------------
+ mm/swap.c                 |  4 ++--
+ mm/vmscan.c               |  2 +-
+ 3 files changed, 13 insertions(+), 22 deletions(-)
+
+diff --git a/include/linux/mm_inline.h b/include/linux/mm_inline.h
+index 03796021f0fe..ef3fd79222e5 100644
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -61,28 +61,19 @@ static inline enum lru_list page_lru_base_type(struct page *page)
+ }
+ 
+ /**
+- * page_off_lru - which LRU list was page on? clearing its lru flags.
+- * @page: the page to test
+- *
+- * Returns the LRU list a page was on, as an index into the array of LRU
+- * lists; and clears its Unevictable or Active flags, ready for freeing.
++ * __clear_page_lru_flags - clear page lru flags before releasing a page
++ * @page: the page that was on lru and now has a zero reference
+  */
+-static __always_inline enum lru_list page_off_lru(struct page *page)
++static __always_inline void __clear_page_lru_flags(struct page *page)
+ {
+-	enum lru_list lru;
+-
+ 	__ClearPageLRU(page);
+-	if (PageUnevictable(page)) {
+-		__ClearPageUnevictable(page);
+-		lru = LRU_UNEVICTABLE;
+-	} else {
+-		lru = page_lru_base_type(page);
+-		if (PageActive(page)) {
+-			__ClearPageActive(page);
+-			lru += LRU_ACTIVE;
+-		}
+-	}
+-	return lru;
++
++	/* this shouldn't happen, so leave the flags to bad_page() */
++	if (PageActive(page) && PageUnevictable(page))
++		return;
++
++	__ClearPageActive(page);
++	__ClearPageUnevictable(page);
+ }
+ 
+ /**
+diff --git a/mm/swap.c b/mm/swap.c
+index 8bbeabc582c1..b252f3593c57 100644
+--- a/mm/swap.c
++++ b/mm/swap.c
+@@ -87,7 +87,7 @@ static void __page_cache_release(struct page *page)
+ 		lruvec = mem_cgroup_page_lruvec(page, pgdat);
+ 		VM_BUG_ON_PAGE(!PageLRU(page), page);
+ 		del_page_from_lru_list(page, lruvec);
+-		page_off_lru(page);
++		__clear_page_lru_flags(page);
+ 		spin_unlock_irqrestore(&pgdat->lru_lock, flags);
+ 	}
+ }
+@@ -887,7 +887,7 @@ void release_pages(struct page **pages, int nr)
+ 			lruvec = mem_cgroup_page_lruvec(page, locked_pgdat);
+ 			VM_BUG_ON_PAGE(!PageLRU(page), page);
+ 			del_page_from_lru_list(page, lruvec);
+-			page_off_lru(page);
++			__clear_page_lru_flags(page);
+ 		}
+ 
+ 		list_add(&page->lru, &pages_to_free);
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index 47a4e8ba150f..d93033407200 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -1862,7 +1862,7 @@ static unsigned noinline_for_stack move_pages_to_lru(struct lruvec *lruvec,
+ 
+ 		if (put_page_testzero(page)) {
+ 			del_page_from_lru_list(page, lruvec);
+-			page_off_lru(page);
++			__clear_page_lru_flags(page);
+ 
+ 			if (unlikely(PageCompound(page))) {
+ 				spin_unlock_irq(&pgdat->lru_lock);
+
+From patchwork Fri Sep 18 03:00:47 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783933
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id C1DCB59D
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:22 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id 835CB206B7
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:22 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="cWN5izs+"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 835CB206B7
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id F1455900004; Thu, 17 Sep 2020 23:01:12 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id E9B608E0001; Thu, 17 Sep 2020 23:01:12 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id D1297900004; Thu, 17 Sep 2020 23:01:12 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0034.hostedemail.com
+ [216.40.44.34])
+	by kanga.kvack.org (Postfix) with ESMTP id B31BC8E0001
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:12 -0400 (EDT)
+Received: from smtpin10.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay01.hostedemail.com (Postfix) with ESMTP id 8214A180AD811
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:12 +0000 (UTC)
+X-FDA: 77274680784.10.mine35_1d03fbd27127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin10.hostedemail.com (Postfix) with ESMTP id 588AA16A07E
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:12 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,f1a9c18b8f2f6ee3,d41d8cd98f00b204,39yjkxwykcm4iej1u808805y.w86527eh-664fuw4.8b0@flex--yuzhao.bounces.google.com,,RULES_HIT:41:69:152:355:379:541:800:960:968:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1534:1541:1593:1594:1711:1730:1747:1777:1792:2393:2559:2562:3138:3139:3140:3141:3142:3152:3353:3865:3867:3868:3874:4250:4321:5007:6261:6653:6742:7875:8957:9010:9592:9969:10004:10400:11026:11473:11658:11914:12114:12296:12297:12438:12555:12895:12986:13069:13311:13357:14096:14097:14181:14394:14659:14721:21080:21444:21627:21990:30054:30070,0,RBL:209.85.160.202:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-62.18.0.100
+ 66.100.201.100;04ygrutmbspk37em4fc3qdhnf3yuqops1ghmj9jz6zbmis6w1996ofgdi4mzdde.y9tgtqtaou3q19d6okmux7oajx4gz14wo17w11erqr1i3bpqmwpkdm8m41ixiru.w-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:0:0:0,LFtime:23,LUA_SUMMARY:none
+X-HE-Tag: mine35_1d03fbd27127
+X-Filterd-Recvd-Size: 4991
+Received: from mail-qt1-f202.google.com (mail-qt1-f202.google.com
+ [209.85.160.202])
+	by imf25.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:11 +0000 (UTC)
+Received: by mail-qt1-f202.google.com with SMTP id o13so3800199qtl.6
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:11 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=b85d06LSJeBa6rsJlkkKw7JSUKETD4Y77r+y+YRUjRk=;
+        b=cWN5izs+aaUKIykYldczEGDmX7RVsvXEViMXNM8ddq7IeJUErvEZ7YdO38E4AFWwxP
+         YEGT0mKVWONgbxqp+r4pTV4D1WwdDlqTrABmb6KVFHS5OFMTLKY2UEzRGM+vL7hhdhKx
+         IaQIzDSeHjmyce1otEEqrqDyv6uST3U5GfHz2sDAE1s8kXR5cjQj4EETNK69mu8yGn9j
+         GvzZfTkNo0CzoDjDLYHYJ8I5KsS2eGdRS+qV0OiiRKfOB1pppqA28sk9tyOGnxQxSwcr
+         G+u1NzRVk46Muag854KLQHKD6YgqmcxLbkzWgPIt4r7DV7v+ZaC3USwXXEuUreUOuKSI
+         IIcw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=b85d06LSJeBa6rsJlkkKw7JSUKETD4Y77r+y+YRUjRk=;
+        b=GXwjqEcRcIe0dp7IY7/It5TpM1wy1nuJtHPsY666gk5xsEV0yh6p62y94O1ILxhxca
+         8YdN6nB460cH7HzTlJx4HI8i6h0NjLjzwsI5J+/rRlH5BV6IU+lbwV/5Ex3Zr2VDf0Xo
+         kD5ORaDZdfgz4XNpFMnWYCB/EJFHUxHX9jafdknhNXJH+yPQLG3KD4pNAnI3Slru1Xuk
+         IW+XA2ArDJDY1hSfVP44bYYcuJTXZn1rcVCuAjMU66b6Mwnt+9HOsEvEYUlIZzcIonAH
+         DT7+1ARtueTMiM5cTzfDpgdQYZJDP3/Dt9mMTbwnSS/f4ApDYZw1W4BsPIHaU3WOQDoy
+         gHZQ==
+X-Gm-Message-State: AOAM533uIOUlDB9lyXb5S+z4caNA5SY9ezN6wT7erKFCHoxz9tr2+rij
+	IP2FFFMdFr9GG4bC2hkw+Gnzoin1Hmo=
+X-Google-Smtp-Source: 
+ ABdhPJx+hjixMwDHpA9umqu4pgWDN6Xi+UKbNRpq8JuDRKAm+QSAwliVY3yAQF3K3VTtyDo+SOcVYv9cqh0=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a0c:e6ea:: with SMTP id
+ m10mr15321673qvn.53.1600398071234;
+ Thu, 17 Sep 2020 20:01:11 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:47 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-10-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 09/13] mm: inline page_lru_base_type()
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+We've removed all other references to this function.
+
+This change should have no side effects.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/mm_inline.h | 27 ++++++---------------------
+ 1 file changed, 6 insertions(+), 21 deletions(-)
+
+diff --git a/include/linux/mm_inline.h b/include/linux/mm_inline.h
+index ef3fd79222e5..07d9a0286635 100644
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -45,21 +45,6 @@ static __always_inline void update_lru_size(struct lruvec *lruvec,
+ #endif
+ }
+ 
+-/**
+- * page_lru_base_type - which LRU list type should a page be on?
+- * @page: the page to test
+- *
+- * Used for LRU list index arithmetic.
+- *
+- * Returns the base LRU type - file or anon - @page should be on.
+- */
+-static inline enum lru_list page_lru_base_type(struct page *page)
+-{
+-	if (page_is_file_lru(page))
+-		return LRU_INACTIVE_FILE;
+-	return LRU_INACTIVE_ANON;
+-}
+-
+ /**
+  * __clear_page_lru_flags - clear page lru flags before releasing a page
+  * @page: the page that was on lru and now has a zero reference
+@@ -88,12 +73,12 @@ static __always_inline enum lru_list page_lru(struct page *page)
+ 	enum lru_list lru;
+ 
+ 	if (PageUnevictable(page))
+-		lru = LRU_UNEVICTABLE;
+-	else {
+-		lru = page_lru_base_type(page);
+-		if (PageActive(page))
+-			lru += LRU_ACTIVE;
+-	}
++		return LRU_UNEVICTABLE;
++
++	lru = page_is_file_lru(page) ? LRU_INACTIVE_FILE : LRU_INACTIVE_ANON;
++	if (PageActive(page))
++		lru += LRU_ACTIVE;
++
+ 	return lru;
+ }
+ 
+
+From patchwork Fri Sep 18 03:00:48 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783935
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 0946F59D
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:25 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id BF9AC206B6
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:24 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="qy3asCDa"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org BF9AC206B6
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id 5E89D900005; Thu, 17 Sep 2020 23:01:14 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id 54DAA8E0001; Thu, 17 Sep 2020 23:01:14 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id 3C8AA900005; Thu, 17 Sep 2020 23:01:14 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0087.hostedemail.com
+ [216.40.44.87])
+	by kanga.kvack.org (Postfix) with ESMTP id 1D3098E0001
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:14 -0400 (EDT)
+Received: from smtpin19.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay05.hostedemail.com (Postfix) with ESMTP id DD4D4181AEF1F
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:13 +0000 (UTC)
+X-FDA: 77274680826.19.tramp67_2714f1e27127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin19.hostedemail.com (Postfix) with ESMTP id B1DB71AD1B5
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:13 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,3682e093dac72313,d41d8cd98f00b204,3-cjkxwykcm8jfk2v919916z.x97638fi-775gvx5.9c1@flex--yuzhao.bounces.google.com,,RULES_HIT:41:152:355:379:541:800:960:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1535:1542:1593:1594:1711:1730:1747:1777:1792:2393:2559:2562:2898:3138:3139:3140:3141:3142:3152:3352:3865:3867:3868:3874:4321:4605:5007:6261:6653:6742:8957:9010:9969:10004:10400:11026:11232:11473:11658:11914:12043:12296:12297:12438:12555:12895:12986:14096:14097:14181:14394:14659:14721:21080:21444:21627:21987:21990:30054:30070,0,RBL:209.85.160.201:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-62.18.0.100
+ 66.100.201.100;04yrbpaqh3wsnazoe1ryrkmu75cryypeq3ykwc6jx4m77r37ydn6yr1xokyoq4g.b1qxc5kgbat76x6h16bnok613inaeqy1jn9zb98t8hc1degx89g4rprn5u8o8ac.c-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:0:0:0,LFtime:22,LUA_SUMMARY:none
+X-HE-Tag: tramp67_2714f1e27127
+X-Filterd-Recvd-Size: 5621
+Received: from mail-qt1-f201.google.com (mail-qt1-f201.google.com
+ [209.85.160.201])
+	by imf17.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:13 +0000 (UTC)
+Received: by mail-qt1-f201.google.com with SMTP id b18so3823805qto.4
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:13 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=JWU8yC6IA7OOmAjcclmLYHeJJ6Drguj19pPsyjDCDs0=;
+        b=qy3asCDaCFhH2UckwoVpj1hLkwKFWdJ8Q5ketDmhYI3hL6mTuFwQvIqRDiOthDLcop
+         PaTh5jl3tn3RExOoer2eQ1sA4CtBHf8RusyChtv3D0k48TiFbyxIhJyEXtCqHq/0n1xE
+         3Yn8oq0MtIy5PWoW+p1Bq2LKE228TMBHdm2Q2e3ocu7wJuESMOzDPfmS1X2MYwdMtH0N
+         /lhTVZtJPDrrqCIwW+Ymnxtxhor8zWXlnCdwoOxR8+e1hPcZXo/+sihZSJUl+SblRMo0
+         nvdn+vCO4zY56L7FbvQlWb3v1qy4rUB83yS9VcoBBSfFkDeCenHZoAYK3FFf8xrMjl6h
+         SWWw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=JWU8yC6IA7OOmAjcclmLYHeJJ6Drguj19pPsyjDCDs0=;
+        b=eYf5b9j5rKUd86YKX1hArgaTGobV9rLTHLM+TEEOoI/qXTya987B8ijVd4/yGFt6rC
+         x8weP+zKLLZyHIgrIM4lH705DSFdPhZ4kErGjLgt4l6ZiHxmMZCsHi1uhkcmw/BR8VSc
+         dIkPaK5hjg+HrbGzoSWI/zVjQDBO7Y9ZiosEKHnWz+63/nPwde+rV/e8eFOo/W+GtQeh
+         U5W4B4vZtntj17P8b6R+uXDWz7+hIAbAytkNv8uqOmmioBK0T/VIXasMqi9SUCFb4Hwb
+         Rap/392Xlvck9ZMrEcoZ/O1gcbCdSRn5utNla7caGGdIjANb50+VgyyTvsrDD+bSYw2c
+         9ESg==
+X-Gm-Message-State: AOAM5323bese1hSq5+KE60c8Nsa0IYPMFwcSDpujcSMfzprZQrL3U40I
+	rWvCD4vuLTzPk1tIqo/ABDPDjaSFIlk=
+X-Google-Smtp-Source: 
+ ABdhPJxIHy/OXzjFuCpoj0u7VNt7iPcltg3BNZV0oXGBDUKbZUUYLhQqY4UiUR7CtG/Lm+IdXuWI6R/A+ec=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:ad4:5745:: with SMTP id
+ q5mr31480391qvx.29.1600398072647;
+ Thu, 17 Sep 2020 20:01:12 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:48 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-11-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 10/13] mm: VM_BUG_ON lru page flags
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+Move scattered VM_BUG_ONs to two essential places that cover all
+lru list additions and deletions.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/mm_inline.h | 4 ++++
+ mm/swap.c                 | 2 --
+ mm/vmscan.c               | 1 -
+ 3 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/include/linux/mm_inline.h b/include/linux/mm_inline.h
+index 07d9a0286635..7183c7a03f09 100644
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -51,6 +51,8 @@ static __always_inline void update_lru_size(struct lruvec *lruvec,
+  */
+ static __always_inline void __clear_page_lru_flags(struct page *page)
+ {
++	VM_BUG_ON_PAGE(!PageLRU(page), page);
++
+ 	__ClearPageLRU(page);
+ 
+ 	/* this shouldn't happen, so leave the flags to bad_page() */
+@@ -72,6 +74,8 @@ static __always_inline enum lru_list page_lru(struct page *page)
+ {
+ 	enum lru_list lru;
+ 
++	VM_BUG_ON_PAGE(PageActive(page) && PageUnevictable(page), page);
++
+ 	if (PageUnevictable(page))
+ 		return LRU_UNEVICTABLE;
+ 
+diff --git a/mm/swap.c b/mm/swap.c
+index b252f3593c57..4daa46907dd5 100644
+--- a/mm/swap.c
++++ b/mm/swap.c
+@@ -85,7 +85,6 @@ static void __page_cache_release(struct page *page)
+ 
+ 		spin_lock_irqsave(&pgdat->lru_lock, flags);
+ 		lruvec = mem_cgroup_page_lruvec(page, pgdat);
+-		VM_BUG_ON_PAGE(!PageLRU(page), page);
+ 		del_page_from_lru_list(page, lruvec);
+ 		__clear_page_lru_flags(page);
+ 		spin_unlock_irqrestore(&pgdat->lru_lock, flags);
+@@ -885,7 +884,6 @@ void release_pages(struct page **pages, int nr)
+ 			}
+ 
+ 			lruvec = mem_cgroup_page_lruvec(page, locked_pgdat);
+-			VM_BUG_ON_PAGE(!PageLRU(page), page);
+ 			del_page_from_lru_list(page, lruvec);
+ 			__clear_page_lru_flags(page);
+ 		}
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index d93033407200..4688e495c242 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -4276,7 +4276,6 @@ void check_move_unevictable_pages(struct pagevec *pvec)
+ 			continue;
+ 
+ 		if (page_evictable(page)) {
+-			VM_BUG_ON_PAGE(PageActive(page), page);
+ 			del_page_from_lru_list(page, lruvec);
+ 			ClearPageUnevictable(page);
+ 			add_page_to_lru_list(page, lruvec);
+
+From patchwork Fri Sep 18 03:00:49 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783937
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 4DAA0618
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:27 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id 08378238EE
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:27 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="gMRyeCTk"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 08378238EE
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id D3EFC900006; Thu, 17 Sep 2020 23:01:15 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id C50728E0001; Thu, 17 Sep 2020 23:01:15 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id AA4A0900006; Thu, 17 Sep 2020 23:01:15 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0098.hostedemail.com
+ [216.40.44.98])
+	by kanga.kvack.org (Postfix) with ESMTP id 89B558E0001
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:15 -0400 (EDT)
+Received: from smtpin11.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay05.hostedemail.com (Postfix) with ESMTP id 5CC45181AEF1F
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:15 +0000 (UTC)
+X-FDA: 77274680910.11.ducks97_25069d827127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin11.hostedemail.com (Postfix) with ESMTP id 3DEA0180F8B80
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:15 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,564cfdfcd886cc3c,d41d8cd98f00b204,3-ijkxwykcnelhm4xb3bb381.zb985ahk-997ixz7.be3@flex--yuzhao.bounces.google.com,,RULES_HIT:41:152:355:379:541:800:960:968:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1534:1541:1593:1594:1711:1730:1747:1777:1792:2393:2559:2562:3138:3139:3140:3141:3142:3152:3352:3865:3867:3870:5007:6261:6653:6742:8957:9592:9969:10004:10400:11026:11473:11658:11914:12043:12296:12297:12438:12555:12895:13069:13311:13357:14181:14394:14659:14721:21080:21444:21627:21990:30054:30070,0,RBL:209.85.160.201:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-66.100.201.100
+ 62.18.0.100;04yrms3rfr3ouccwoi6wnumckygpuoc6ubwpwrkheuy7u4jai8swttxd3d6dd9u.ib95mpt7uy9ntz7dnux4tquc5iz1midoqn1ugce48pa15hi5kioth76aj1fzshf.4-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:0:0:0,LFtime:22,LUA_SUMMARY:none
+X-HE-Tag: ducks97_25069d827127
+X-Filterd-Recvd-Size: 4810
+Received: from mail-qt1-f201.google.com (mail-qt1-f201.google.com
+ [209.85.160.201])
+	by imf25.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:14 +0000 (UTC)
+Received: by mail-qt1-f201.google.com with SMTP id a14so3799695qtp.15
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:14 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=wq04R7kZnQOtaC6LIn5FEyAUuNq1+kFsvgljt2u93LM=;
+        b=gMRyeCTkVNljPnLMYO/c5iwSUJPLZYnD8yVlrpNnYNQl+BUx4Gp6/CVq2UXghQXGL0
+         DsDMaadax8KWE8X5qaIMvpG6T690scGvd3Umzz2c8LXQDxhE5P42VbtJwYEG5wO+jFGZ
+         L1gYoNlhdLpsUUd9kzHg0DoMrL069TOq4UpyUgaStksAyD4JM0446iezsZlMDIKjXeVJ
+         K+15ABfhWQghGRPSS5tivLNMvFtAiisjVBtwvc/dxiDYVE6hCRMbnimrwIAZSPG1X0g0
+         7Db4ovJPLWWGZgL8IdeKqCGHLlA8tr+98Io6ncueImMNiVlVOpsrvmFQY4NauP0wGXb6
+         Swbg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=wq04R7kZnQOtaC6LIn5FEyAUuNq1+kFsvgljt2u93LM=;
+        b=LitHKduA3N+PATeyawpcWZHks/7sTKwz85ZsT6VvT8wTNdXAaBrpSVcUWHQoYt6472
+         v5RlqqeDHgclba/bNp6N795P+TvAfzSrVNfKVpfq9gdRsj7rzOmaGGQN2eoPEGeXYMdl
+         Ceex0EN9tAKsIxlGcYCjog6/amUzsIqdJzKY1+P98iH9j1YFeWp6CLsuZtJXV4dR0yT3
+         1vInWDnjMy+opDlSYLLT/X5I6/2FAa4inSIXCnRMEOAuOC9yQnyNMF2OFwwwRxu2t5aG
+         ZF0OD7wkcubbkRaV1x7vYsmZpj2ijcgpVCMoiQMJkv181hpfhrUZ+G43zda1jhdn3FvA
+         bEOw==
+X-Gm-Message-State: AOAM530ecLWIyZ8aj2kqjTaDLIjmCtp9P94Vfxc9hrgHdZ5x9etoq81U
+	AfRE8WAy7iWLb766I//jz1AlQ09AG7o=
+X-Google-Smtp-Source: 
+ ABdhPJxaysxGdARme+9yjmforBPIN7Zkq7S72PiA++g2NnAT+54HUXkrR7L5CWXZOP3wm2phDI5l8TxTG5E=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a0c:aed5:: with SMTP id
+ n21mr32541779qvd.20.1600398074007;
+ Thu, 17 Sep 2020 20:01:14 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:49 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-12-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 11/13] mm: inline __update_lru_size()
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+All other references to the function were removed after
+commit a892cb6b977f ("mm/vmscan.c: use update_lru_size() in update_lru_sizes()")
+
+This change should have no side effects.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/mm_inline.h | 9 +--------
+ 1 file changed, 1 insertion(+), 8 deletions(-)
+
+diff --git a/include/linux/mm_inline.h b/include/linux/mm_inline.h
+index 7183c7a03f09..355ea1ee32bd 100644
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -24,7 +24,7 @@ static inline int page_is_file_lru(struct page *page)
+ 	return !PageSwapBacked(page);
+ }
+ 
+-static __always_inline void __update_lru_size(struct lruvec *lruvec,
++static __always_inline void update_lru_size(struct lruvec *lruvec,
+ 				enum lru_list lru, enum zone_type zid,
+ 				int nr_pages)
+ {
+@@ -33,13 +33,6 @@ static __always_inline void __update_lru_size(struct lruvec *lruvec,
+ 	__mod_lruvec_state(lruvec, NR_LRU_BASE + lru, nr_pages);
+ 	__mod_zone_page_state(&pgdat->node_zones[zid],
+ 				NR_ZONE_LRU_BASE + lru, nr_pages);
+-}
+-
+-static __always_inline void update_lru_size(struct lruvec *lruvec,
+-				enum lru_list lru, enum zone_type zid,
+-				int nr_pages)
+-{
+-	__update_lru_size(lruvec, lru, zid, nr_pages);
+ #ifdef CONFIG_MEMCG
+ 	mem_cgroup_update_lru_size(lruvec, lru, zid, nr_pages);
+ #endif
+
+From patchwork Fri Sep 18 03:00:50 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783939
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id BA2B8618
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:29 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id 73DF0206B6
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:29 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="fU4u9XAv"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 73DF0206B6
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id 6122E900007; Thu, 17 Sep 2020 23:01:17 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id 54AD28E0001; Thu, 17 Sep 2020 23:01:17 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id 4126F900007; Thu, 17 Sep 2020 23:01:17 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0132.hostedemail.com
+ [216.40.44.132])
+	by kanga.kvack.org (Postfix) with ESMTP id 2127E8E0001
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:17 -0400 (EDT)
+Received: from smtpin01.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay03.hostedemail.com (Postfix) with ESMTP id E46B38249980
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:16 +0000 (UTC)
+X-FDA: 77274680952.01.cord50_260ae7c27127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin01.hostedemail.com (Postfix) with ESMTP id BC66D1004BA83
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:16 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,6ebcddb3a3933654,d41d8cd98f00b204,3-yjkxwykcnimin5yc4cc492.0ca96bil-aa8jy08.cf4@flex--yuzhao.bounces.google.com,,RULES_HIT:41:152:355:379:541:800:960:968:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1534:1541:1593:1594:1711:1730:1747:1777:1792:2393:2559:2562:3138:3139:3140:3141:3142:3152:3352:3369:3865:3867:4250:4321:4605:5007:6261:6653:6742:8603:9010:9592:9969:10004:10400:10450:10455:11026:11473:11658:11914:12296:12297:12438:12555:12895:12986:13069:13311:13357:14093:14096:14097:14181:14394:14659:14721:19904:19999:21080:21444:21451:21627:30054:30070,0,RBL:209.85.166.201:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-62.18.0.100
+ 66.100.201.100;04y8a3spmgkoz6u565d6383con1xtyp6g5wowa3x3ep5jozmbzekryqma75ksis.9f7xgkcn5b8xppycy611m15bnyys95aehm71jcepph8ktmwbopzfsw4bp3zqexj.w-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom_rules:0:0:0,LFtime:22,LU
+ A_SUMMAR
+X-HE-Tag: cord50_260ae7c27127
+X-Filterd-Recvd-Size: 4804
+Received: from mail-il1-f201.google.com (mail-il1-f201.google.com
+ [209.85.166.201])
+	by imf16.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:16 +0000 (UTC)
+Received: by mail-il1-f201.google.com with SMTP id t11so3451176ilj.10
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:16 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=xN4oCimHvtKPjnmxoot3/TeH/iRIHwliUhH4EqN3ncs=;
+        b=fU4u9XAvUyFqc0FXzkoK3nY8UyYBJi56mVd5IZCcXi/06TGZR06LJCa+NOPHM3hx5H
+         8Vi3W7LOmppBEorAX04u1pMD7lMDWoBkZcEincebTf9bbeQxEh8HW9PUgpnfbnIiTN68
+         9o3rBJyuwDc99b0fhHU1oNUDG0h0Xw75vzSSkA7/1SEM82CPXoLce4PfkqRWQAge/aP1
+         Rr3vbi5Ff/5NyfDZijt1PVK9pMQ3ZenSPV/g81k0fLtiRMiEN9M2k+0pcyo20SO7gWLn
+         f1YuRnutJIYrgSOmdTnSMQMra+rHNsxOPkCkC5iCVj4JFgIYvEDVqVZbRoBajtVwrWsH
+         Lc7g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=xN4oCimHvtKPjnmxoot3/TeH/iRIHwliUhH4EqN3ncs=;
+        b=POPrvvkSw8Plg8wrdfTktg6IdO471GPVoUTqQQHOjuOLzvtZmGvOccBb71LQeGxwbj
+         7YaHV+V1F2GOEjT16VKsMs894quA5NxTsxlYiNOsZ6oDEG3SSNENgOzltCcesih/HFZn
+         ffNn25oYDy9bYZ1MEounr+qn2Cs+rMGXyScKNaE74DGAx8tZRpX5NRYoCxmID+6+dver
+         hZYdPfwsSMoXEuf/g2YeT40AeemdzM5OoCTteuoRQGyZOA7BAOA8pE7hPSYtG9kM+Ibz
+         REaTyov8iP5q3v78VCQ6gALpuWSsP5Jeu/epEc7DYfjZenJ3XNNwYwvpbE/JOi2OT/T7
+         0Lhg==
+X-Gm-Message-State: AOAM531lA5m+WfGmAVMyrSiY1ndpn8Gm4UE1EwsVLvWo85Xwm2CW/Evi
+	7LdMOTPrBrT7f+96/WGRdIeH6YrlXjQ=
+X-Google-Smtp-Source: 
+ ABdhPJxoASGjkRdX7gV5owKUKpPt2SzP5/4sSvfrQT5kIgM3rBNQPtBrjsZo7vBQgv022JrvE7jKBpKaBVw=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:a92:1fd9:: with SMTP id
+ f86mr27888282ilf.250.1600398075411;
+ Thu, 17 Sep 2020 20:01:15 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:50 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-13-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 12/13] mm: make lruvec_lru_size() static
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+All other references to the function were removed after
+commit b910718a948a ("mm: vmscan: detect file thrashing at the reclaim root")
+
+This change should have no side effects.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/mmzone.h | 2 --
+ mm/vmscan.c            | 3 ++-
+ 2 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
+index 8379432f4f2f..c2b1f1d363cc 100644
+--- a/include/linux/mmzone.h
++++ b/include/linux/mmzone.h
+@@ -842,8 +842,6 @@ static inline struct pglist_data *lruvec_pgdat(struct lruvec *lruvec)
+ #endif
+ }
+ 
+-extern unsigned long lruvec_lru_size(struct lruvec *lruvec, enum lru_list lru, int zone_idx);
+-
+ #ifdef CONFIG_HAVE_MEMORYLESS_NODES
+ int local_memory_node(int node_id);
+ #else
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index 4688e495c242..367843296c21 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -312,7 +312,8 @@ unsigned long zone_reclaimable_pages(struct zone *zone)
+  * @lru: lru to use
+  * @zone_idx: zones to consider (use MAX_NR_ZONES for the whole LRU list)
+  */
+-unsigned long lruvec_lru_size(struct lruvec *lruvec, enum lru_list lru, int zone_idx)
++static unsigned long lruvec_lru_size(struct lruvec *lruvec, enum lru_list lru,
++				     int zone_idx)
+ {
+ 	unsigned long size = 0;
+ 	int zid;
+
+From patchwork Fri Sep 18 03:00:51 2020
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Yu Zhao <yuzhao@google.com>
+X-Patchwork-Id: 11783941
+Return-Path: <SRS0=yEt/=C3=kvack.org=owner-linux-mm@kernel.org>
+Received: from mail.kernel.org (pdx-korg-mail-1.web.codeaurora.org
+ [172.30.200.123])
+	by pdx-korg-patchwork-2.web.codeaurora.org (Postfix) with ESMTP id 7CF4D59D
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:32 +0000 (UTC)
+Received: from kanga.kvack.org (kanga.kvack.org [205.233.56.17])
+	by mail.kernel.org (Postfix) with ESMTP id 2D40B206B6
+	for <patchwork-linux-mm@patchwork.kernel.org>;
+ Fri, 18 Sep 2020 03:01:32 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key)
+ header.d=google.com header.i=@google.com header.b="TqxUT8oY"
+DMARC-Filter: OpenDMARC Filter v1.3.2 mail.kernel.org 2D40B206B6
+Authentication-Results: mail.kernel.org;
+ dmarc=fail (p=reject dis=none) header.from=google.com
+Authentication-Results: mail.kernel.org;
+ spf=pass smtp.mailfrom=owner-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix)
+	id A7E41900008; Thu, 17 Sep 2020 23:01:18 -0400 (EDT)
+Delivered-To: linux-mm-outgoing@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 40)
+	id 9DBC88E0001; Thu, 17 Sep 2020 23:01:18 -0400 (EDT)
+X-Original-To: int-list-linux-mm@kvack.org
+X-Delivered-To: int-list-linux-mm@kvack.org
+Received: by kanga.kvack.org (Postfix, from userid 63042)
+	id 80A10900008; Thu, 17 Sep 2020 23:01:18 -0400 (EDT)
+X-Original-To: linux-mm@kvack.org
+X-Delivered-To: linux-mm@kvack.org
+Received: from forelay.hostedemail.com (smtprelay0224.hostedemail.com
+ [216.40.44.224])
+	by kanga.kvack.org (Postfix) with ESMTP id 628AB8E0001
+	for <linux-mm@kvack.org>; Thu, 17 Sep 2020 23:01:18 -0400 (EDT)
+Received: from smtpin22.hostedemail.com (10.5.19.251.rfc1918.com
+ [10.5.19.251])
+	by forelay03.hostedemail.com (Postfix) with ESMTP id 314258249980
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:18 +0000 (UTC)
+X-FDA: 77274681036.22.wing41_030686627127
+Received: from filter.hostedemail.com (10.5.16.251.rfc1918.com [10.5.16.251])
+	by smtpin22.hostedemail.com (Postfix) with ESMTP id 0DD4D18038E60
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:18 +0000 (UTC)
+X-Spam-Summary: 
+ 1,0,0,a160c0ee1cfd20e1,d41d8cd98f00b204,3_cjkxwykcnmnjo6zd5dd5a3.1dba7cjm-bb9kz19.dg5@flex--yuzhao.bounces.google.com,,RULES_HIT:2:41:152:355:379:541:800:960:973:988:989:1260:1277:1313:1314:1345:1359:1437:1516:1518:1535:1593:1594:1605:1730:1747:1777:1792:2194:2199:2393:2559:2562:2895:3138:3139:3140:3141:3142:3152:3865:3866:3867:3868:3870:3871:3872:3874:4049:4120:4321:4605:5007:6119:6261:6653:6742:7903:8603:8660:9969:10004:11026:11473:11658:11914:12043:12296:12297:12438:12555:12663:12679:12895:12986:13148:13161:13180:13229:13230:14394:14659:21080:21444:21451:21627:21939:21990:30045:30054:30070,0,RBL:209.85.219.74:@flex--yuzhao.bounces.google.com:.lbl8.mailshell.net-62.18.0.100
+ 66.100.201.100;04y88yce71fh6wz7uzeph18sz1rudoc6i3gknbzyueabw9gyrzepssbtj3wx8cz.5t6qtyfxhxiogrrt1wd6whb4ww3jfyz4p5sctp5waa3pghres1u4odixgmaup64.g-lbl8.mailshell.net-223.238.255.100,CacheIP:none,Bayesian:0.5,0.5,0.5,Netcheck:none,DomainCache:0,MSF:not
+ bulk,SPF:fp,MSBL:0,DNSBL:neutral,Custom
+ _rules:0
+X-HE-Tag: wing41_030686627127
+X-Filterd-Recvd-Size: 9720
+Received: from mail-qv1-f74.google.com (mail-qv1-f74.google.com
+ [209.85.219.74])
+	by imf33.hostedemail.com (Postfix) with ESMTP
+	for <linux-mm@kvack.org>; Fri, 18 Sep 2020 03:01:17 +0000 (UTC)
+Received: by mail-qv1-f74.google.com with SMTP id l1so2915687qvr.0
+        for <linux-mm@kvack.org>; Thu, 17 Sep 2020 20:01:17 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=sender:date:in-reply-to:message-id:mime-version:references:subject
+         :from:to:cc;
+        bh=quTmQKmvj9k24MCP9HJuhYxbIPALZEbg5rUE1WUWNzk=;
+        b=TqxUT8oYt7IQQ4RmJjkJOpm1JWoqZxlnUXsXQgBh+egnzkelbzRTLgjNf9GOR+cEcG
+         bonHmsrnPcNfGIyqGwpPwKHY5FuxXVCCSLArnZ9/aEuOrhgHyRudqGSiNfAo7+L4tdtt
+         3nn0MhJDTVjNFI3ZmkmUcsqcJBB+CkGnyvl/QeqxULujicPL/JiQAEGNTFfDarxeH1tr
+         P98fUXdsYPYz5+aTCuRwmwZBmBNltOwhJOidu4RN6Ts640bsPEJxMClpKt4LCEzlD6So
+         eOJZVlXgnUMC8IDAM+Hqn96bifT33u18qim9fQjIRHmiVkhHylMD3k5rXKA8aUFKcm+n
+         VYuA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=quTmQKmvj9k24MCP9HJuhYxbIPALZEbg5rUE1WUWNzk=;
+        b=LiNt8NUUC7hvvyZu/ixogQ8dclm8asvnS41ZHHHt/SkUG8okJENc+35ug2JrEXCzZy
+         ACJJZr5x/xQoRLLX1TV5VoxJvWBUoLH4+n+fPrVL72tESoFQLLILzUrYwPUKLcrxpfzq
+         YXBlla5Zwd8R8E09jKffKHPDh4sOiVX6ksdgm7hxgj/tr7O4JWwwOFHvbPX9XBEBrADw
+         lI4MOkqAmYnVpWvJLC2PSyM1VKEcxB18lAcncaCdMN09TY4YPEqVzOSumjdhNAh4HuFl
+         5cyGXYNdO7lSflrGBg+JqVgbHJE4ozCzWX43y9TCMFT9eBKbMRO7gVUK2oU8Zk6MvPkx
+         g3hw==
+X-Gm-Message-State: AOAM531EQHMgB4Aky4XrvOnxMttWlsaBXGwfaR8w7S0Op7Lr9fnOqP51
+	SnyE3lSMj3O+v5yMu5RNalzDJZOJKvw=
+X-Google-Smtp-Source: 
+ ABdhPJx8Iy0UQqYwOk32k7vXKcaC3dm456ghlzIfQzdm4d+sSvCnRGu8u56jTkTxqUgi68jHOAURiox/7Hw=
+X-Received: from yuzhao.bld.corp.google.com
+ ([2620:15c:183:200:7220:84ff:fe09:2d90])
+ (user=yuzhao job=sendgmr) by 2002:ad4:5745:: with SMTP id
+ q5mr31480664qvx.29.1600398076756;
+ Thu, 17 Sep 2020 20:01:16 -0700 (PDT)
+Date: Thu, 17 Sep 2020 21:00:51 -0600
+In-Reply-To: <20200918030051.650890-1-yuzhao@google.com>
+Message-Id: <20200918030051.650890-14-yuzhao@google.com>
+Mime-Version: 1.0
+References: <20200918030051.650890-1-yuzhao@google.com>
+X-Mailer: git-send-email 2.28.0.681.g6f77f65b4e-goog
+Subject: [PATCH 13/13] mm: enlarge the int parameter of update_lru_size()
+From: Yu Zhao <yuzhao@google.com>
+To: Andrew Morton <akpm@linux-foundation.org>,
+ Michal Hocko <mhocko@kernel.org>
+Cc: Alex Shi <alex.shi@linux.alibaba.com>,
+ Steven Rostedt <rostedt@goodmis.org>,
+	Ingo Molnar <mingo@redhat.com>, Johannes Weiner <hannes@cmpxchg.org>,
+	Vladimir Davydov <vdavydov.dev@gmail.com>, Roman Gushchin <guro@fb.com>,
+ Shakeel Butt <shakeelb@google.com>,
+	Chris Down <chris@chrisdown.name>, Yafang Shao <laoar.shao@gmail.com>,
+	Vlastimil Babka <vbabka@suse.cz>, Huang Ying <ying.huang@intel.com>,
+	Pankaj Gupta <pankaj.gupta.linux@gmail.com>,
+ Matthew Wilcox <willy@infradead.org>,
+	Konstantin Khlebnikov <koct9i@gmail.com>, Minchan Kim <minchan@kernel.org>,
+	Jaewon Kim <jaewon31.kim@samsung.com>, cgroups@vger.kernel.org,
+ linux-mm@kvack.org,
+	linux-kernel@vger.kernel.org, Yu Zhao <yuzhao@google.com>
+X-Bogosity: Ham, tests=bogofilter, spamicity=0.000000, version=1.2.4
+Sender: owner-linux-mm@kvack.org
+Precedence: bulk
+X-Loop: owner-majordomo@kvack.org
+List-ID: <linux-mm.kvack.org>
+
+In update_lru_sizes(), we call update_lru_size() with a long
+argument, whereas the callee only takes an int parameter. Though this
+isn't causing any overflow I'm aware of, it's not a good idea to
+go through the truncation since the underlying counters are already
+in long.
+
+This patch enlarges all relevant parameters on the path to the final
+underlying counters:
+	update_lru_size(int -> long)
+		if memcg:
+			__mod_lruvec_state(int -> long)
+				if smp:
+					__mod_node_page_state(long)
+				else:
+					__mod_node_page_state(int -> long)
+			__mod_memcg_lruvec_state(int -> long)
+				__mod_memcg_state(int -> long)
+		else:
+			__mod_lruvec_state(int -> long)
+				if smp:
+					__mod_node_page_state(long)
+				else:
+					__mod_node_page_state(int -> long)
+
+		__mod_zone_page_state(long)
+
+		if memcg:
+			mem_cgroup_update_lru_size(int -> long)
+
+Note that __mod_node_page_state() for the smp case and
+__mod_zone_page_state() already use long. So this change also fixes
+the inconsistency.
+
+Signed-off-by: Yu Zhao <yuzhao@google.com>
+---
+ include/linux/memcontrol.h | 14 +++++++-------
+ include/linux/mm_inline.h  |  2 +-
+ include/linux/vmstat.h     |  2 +-
+ mm/memcontrol.c            | 10 +++++-----
+ 4 files changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/include/linux/memcontrol.h b/include/linux/memcontrol.h
+index d0b036123c6a..fcd1829f8382 100644
+--- a/include/linux/memcontrol.h
++++ b/include/linux/memcontrol.h
+@@ -621,7 +621,7 @@ static inline bool mem_cgroup_online(struct mem_cgroup *memcg)
+ int mem_cgroup_select_victim_node(struct mem_cgroup *memcg);
+ 
+ void mem_cgroup_update_lru_size(struct lruvec *lruvec, enum lru_list lru,
+-		int zid, int nr_pages);
++		int zid, long nr_pages);
+ 
+ static inline
+ unsigned long mem_cgroup_get_zone_lru_size(struct lruvec *lruvec,
+@@ -707,7 +707,7 @@ static inline unsigned long memcg_page_state_local(struct mem_cgroup *memcg,
+ 	return x;
+ }
+ 
+-void __mod_memcg_state(struct mem_cgroup *memcg, int idx, int val);
++void __mod_memcg_state(struct mem_cgroup *memcg, int idx, long val);
+ 
+ /* idx can be of type enum memcg_stat_item or node_stat_item */
+ static inline void mod_memcg_state(struct mem_cgroup *memcg,
+@@ -790,9 +790,9 @@ static inline unsigned long lruvec_page_state_local(struct lruvec *lruvec,
+ }
+ 
+ void __mod_memcg_lruvec_state(struct lruvec *lruvec, enum node_stat_item idx,
+-			      int val);
++			      long val);
+ void __mod_lruvec_state(struct lruvec *lruvec, enum node_stat_item idx,
+-			int val);
++			long val);
+ void __mod_lruvec_slab_state(void *p, enum node_stat_item idx, int val);
+ 
+ void mod_memcg_obj_state(void *p, int idx, int val);
+@@ -1166,7 +1166,7 @@ static inline unsigned long memcg_page_state_local(struct mem_cgroup *memcg,
+ 
+ static inline void __mod_memcg_state(struct mem_cgroup *memcg,
+ 				     int idx,
+-				     int nr)
++				     long nr)
+ {
+ }
+ 
+@@ -1201,12 +1201,12 @@ static inline unsigned long lruvec_page_state_local(struct lruvec *lruvec,
+ }
+ 
+ static inline void __mod_memcg_lruvec_state(struct lruvec *lruvec,
+-					    enum node_stat_item idx, int val)
++					    enum node_stat_item idx, long val)
+ {
+ }
+ 
+ static inline void __mod_lruvec_state(struct lruvec *lruvec,
+-				      enum node_stat_item idx, int val)
++				      enum node_stat_item idx, long val)
+ {
+ 	__mod_node_page_state(lruvec_pgdat(lruvec), idx, val);
+ }
+diff --git a/include/linux/mm_inline.h b/include/linux/mm_inline.h
+index 355ea1ee32bd..18e85071b44a 100644
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -26,7 +26,7 @@ static inline int page_is_file_lru(struct page *page)
+ 
+ static __always_inline void update_lru_size(struct lruvec *lruvec,
+ 				enum lru_list lru, enum zone_type zid,
+-				int nr_pages)
++				long nr_pages)
+ {
+ 	struct pglist_data *pgdat = lruvec_pgdat(lruvec);
+ 
+diff --git a/include/linux/vmstat.h b/include/linux/vmstat.h
+index 91220ace31da..2ae35e8c45f0 100644
+--- a/include/linux/vmstat.h
++++ b/include/linux/vmstat.h
+@@ -310,7 +310,7 @@ static inline void __mod_zone_page_state(struct zone *zone,
+ }
+ 
+ static inline void __mod_node_page_state(struct pglist_data *pgdat,
+-			enum node_stat_item item, int delta)
++			enum node_stat_item item, long delta)
+ {
+ 	node_page_state_add(delta, pgdat, item);
+ }
+diff --git a/mm/memcontrol.c b/mm/memcontrol.c
+index cfa6cbad21d5..11bc4bb36882 100644
+--- a/mm/memcontrol.c
++++ b/mm/memcontrol.c
+@@ -774,7 +774,7 @@ mem_cgroup_largest_soft_limit_node(struct mem_cgroup_tree_per_node *mctz)
+  * @idx: the stat item - can be enum memcg_stat_item or enum node_stat_item
+  * @val: delta to add to the counter, can be negative
+  */
+-void __mod_memcg_state(struct mem_cgroup *memcg, int idx, int val)
++void __mod_memcg_state(struct mem_cgroup *memcg, int idx, long val)
+ {
+ 	long x, threshold = MEMCG_CHARGE_BATCH;
+ 
+@@ -812,7 +812,7 @@ parent_nodeinfo(struct mem_cgroup_per_node *pn, int nid)
+ }
+ 
+ void __mod_memcg_lruvec_state(struct lruvec *lruvec, enum node_stat_item idx,
+-			      int val)
++			      long val)
+ {
+ 	struct mem_cgroup_per_node *pn;
+ 	struct mem_cgroup *memcg;
+@@ -853,7 +853,7 @@ void __mod_memcg_lruvec_state(struct lruvec *lruvec, enum node_stat_item idx,
+  * change of state at this level: per-node, per-cgroup, per-lruvec.
+  */
+ void __mod_lruvec_state(struct lruvec *lruvec, enum node_stat_item idx,
+-			int val)
++			long val)
+ {
+ 	/* Update node */
+ 	__mod_node_page_state(lruvec_pgdat(lruvec), idx, val);
+@@ -1354,7 +1354,7 @@ struct lruvec *mem_cgroup_page_lruvec(struct page *page, struct pglist_data *pgd
+  * so as to allow it to check that lru_size 0 is consistent with list_empty).
+  */
+ void mem_cgroup_update_lru_size(struct lruvec *lruvec, enum lru_list lru,
+-				int zid, int nr_pages)
++				int zid, long nr_pages)
+ {
+ 	struct mem_cgroup_per_node *mz;
+ 	unsigned long *lru_size;
+@@ -1371,7 +1371,7 @@ void mem_cgroup_update_lru_size(struct lruvec *lruvec, enum lru_list lru,
+ 
+ 	size = *lru_size;
+ 	if (WARN_ONCE(size < 0,
+-		"%s(%p, %d, %d): lru_size %ld\n",
++		"%s(%p, %d, %ld): lru_size %ld\n",
+ 		__func__, lruvec, lru, nr_pages, size)) {
+ 		VM_BUG_ON(1);
+ 		*lru_size = 0;

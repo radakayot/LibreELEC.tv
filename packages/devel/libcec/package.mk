@@ -17,12 +17,18 @@ PKG_CMAKE_OPTS_TARGET="-DBUILD_SHARED_LIBS=1 \
                        -DSKIP_PYTHON_WRAPPER=1 \
                        -DHAVE_IMX_API=0 \
                        -DHAVE_AOCEC_API=0 -DHAVE_AMLOGIC_API=0 \
-                       -DHAVE_GIT_BIN=0 \
-                       -DHAVE_RPI_LIB=0"
+                       -DHAVE_GIT_BIN=0"
 
 # libX11 and xrandr to read the sink's EDID, used to determine the PC's HDMI physical address
 if [ "${DISPLAYSERVER}" = "x11" ]; then
   PKG_DEPENDS_TARGET+=" libX11 libXrandr"
+fi
+
+if [ "${OPENGLES}" = "bcm2835-driver" ]; then
+  PKG_DEPENDS_TARGET+=" bcm2835-driver"
+  PKG_CMAKE_OPTS_TARGET+=" -DHAVE_RPI_API=1"
+else
+  PKG_CMAKE_OPTS_TARGET+=" -DHAVE_RPI_API=0"
 fi
 
 if [ "${CEC_FRAMEWORK_SUPPORT}" = "yes" ]; then

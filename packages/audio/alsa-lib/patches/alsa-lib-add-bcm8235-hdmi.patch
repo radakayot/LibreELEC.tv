@@ -1,0 +1,63 @@
+diff -ruN a/src/conf/cards/aliases.conf b/src/conf/cards/aliases.conf
+--- a/src/conf/cards/aliases.conf	2023-03-30 18:54:01.473816660 +0300
++++ b/src/conf/cards/aliases.conf	2023-03-30 18:55:06.593814623 +0300
+@@ -57,6 +57,7 @@
+ CMI8787 cards.CMI8788
+ pistachio cards.pistachio-card
+ VC4-HDMI cards.vc4-hdmi
++BCM2835_HDMI cards.bcm2835_hdmi
+ 
+ <confdir:ctl/default.conf>
+ <confdir:pcm/default.conf>
+diff -ruN a/src/conf/cards/bcm2835_hdmi.conf b/src/conf/cards/bcm2835_hdmi.conf
+--- a/src/conf/cards/bcm2835_hdmi.conf	1970-01-01 02:00:00.000000000 +0200
++++ b/src/conf/cards/bcm2835_hdmi.conf	2023-03-30 18:51:25.240071000 +0300
+@@ -0,0 +1,37 @@
++<confdir:pcm/iec958.conf>
++bcm2835_hdmi.pcm.iec958.0 {
++    @args [ CARD AES0 AES1 AES2 AES3 ]
++    @args.CARD {
++        type string
++    }
++    @args.AES0 {
++        type integer
++    }
++    @args.AES1 {
++        type integer
++    }
++    @args.AES2 {
++        type integer
++    }
++    @args.AES3 {
++        type integer
++    }
++    type hooks
++    slave.pcm {
++        type hw
++        card $CARD
++        device 1
++    }
++    hooks.0 {
++        type ctl_elems
++        hook_args [
++            {
++                interface PCM
++                name "IEC958 Playback Default"
++                lock true
++                preserve true
++                value [ $AES0 $AES1 $AES2 $AES3 ]
++            }
++        ]
++    }
++}
+diff -ruN a/src/conf/cards/Makefile.am b/src/conf/cards/Makefile.am
+--- a/src/conf/cards/Makefile.am	2022-10-24 11:17:27.000000000 +0300
++++ b/src/conf/cards/Makefile.am	2023-03-30 19:01:17.872553009 +0300
+@@ -12,6 +12,7 @@
+ 	Audigy2.conf \
+ 	Aureon51.conf \
+ 	Aureon71.conf \
++	bcm2835_hdmi.conf \
+ 	CA0106.conf \
+ 	CMI8338.conf \
+ 	CMI8338-SWIEC.conf \

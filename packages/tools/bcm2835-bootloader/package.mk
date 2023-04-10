@@ -3,26 +3,28 @@
 # Copyright (C) 2017-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="bcm2835-bootloader"
-PKG_VERSION="2c9ca22c4aedd1a8a6bc14698be5861525f2bfdf"
-PKG_SHA256="575d16dfd8e481abbe7410e284b30706e82bd69f1f56528520bcb7dea72766f1"
+PKG_VERSION="1.20220308"
+PKG_SHA256="906fcce9e3908c1490d8e7ce09445accd72d17112c9c13d285ae5d186531c7d3"
 PKG_ARCH="arm aarch64"
 PKG_LICENSE="nonfree"
 PKG_SITE="http://www.broadcom.com"
-PKG_URL="${DISTRO_SRC}/${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_URL="https://github.com/raspberrypi/firmware/archive/refs/tags/${PKG_VERSION}_buster.tar.gz"
 PKG_DEPENDS_TARGET="toolchain linux bcmstat"
 PKG_LONGDESC="bcm2835-bootloader: Tool to create a bootable kernel for RaspberryPi"
 PKG_TOOLCHAIN="manual"
 
 makeinstall_target() {
   mkdir -p ${INSTALL}/usr/share/bootloader
-    cp -PRv LICENCE* ${INSTALL}/usr/share/bootloader
-    cp -PRv bootcode.bin ${INSTALL}/usr/share/bootloader
+    cp -PRv boot/LICENCE* ${INSTALL}/usr/share/bootloader
+    cp -PRv boot/bootcode.bin ${INSTALL}/usr/share/bootloader/bootcode.bin
     if [ "${DEVICE}" = "RPi4" ]; then
-      cp -PRv fixup4x.dat ${INSTALL}/usr/share/bootloader/fixup.dat
-      cp -PRv start4x.elf ${INSTALL}/usr/share/bootloader/start.elf
+      cp -PRv boot/fixup4x.dat ${INSTALL}/usr/share/bootloader/fixup.dat
+      cp -PRv boot/start4x.elf ${INSTALL}/usr/share/bootloader/start.elf
     else
-      cp -PRv fixup_x.dat ${INSTALL}/usr/share/bootloader/fixup.dat
-      cp -PRv start_x.elf ${INSTALL}/usr/share/bootloader/start.elf
+      cp -PRv boot/fixup_x.dat ${INSTALL}/usr/share/bootloader/fixup_x.dat
+      cp -PRv boot/start_x.elf ${INSTALL}/usr/share/bootloader/start_x.elf
+      cp -PRv boot/fixup.dat ${INSTALL}/usr/share/bootloader/fixup.dat
+      cp -PRv boot/start.elf ${INSTALL}/usr/share/bootloader/start.elf
     fi
 
     find_file_path bootloader/update.sh ${PKG_DIR}/files/update.sh && cp -PRv ${FOUND_PATH} ${INSTALL}/usr/share/bootloader

@@ -12,22 +12,23 @@ PKG_DEPENDS_TARGET="toolchain zlib bzip2 openssl speex"
 PKG_LONGDESC="FFmpeg is a complete, cross-platform solution to record, convert and stream audio and video."
 PKG_PATCH_DIRS="kodi libreelec"
 
-case "${PROJECT}" in
-  Amlogic)
-    PKG_VERSION="f9638b6331277e53ecd9276db5fe6dcd91d44c57"
-    PKG_FFMPEG_BRANCH="dev/4.4/rpi_import_1"
-    PKG_SHA256="3b42cbffd15d95d59e402475fcdb1aaac9ae6a8404a521b95d1fe79c6b2baad4"
-    PKG_URL="https://github.com/jc-kynesim/rpi-ffmpeg/archive/${PKG_VERSION}.tar.gz"
-    PKG_PATCH_DIRS="libreelec dav1d"
-    ;;
-  RPi)
-    PKG_FFMPEG_RPI="--disable-mmal --disable-rpi --enable-sand"
-    PKG_PATCH_DIRS+=" rpi"
-    ;;
-  *)
-    PKG_PATCH_DIRS+=" v4l2-request v4l2-drmprime"
-    ;;
-esac
+if [ "${PROJECT}" = "Amlogic" ]; then
+  PKG_VERSION="f9638b6331277e53ecd9276db5fe6dcd91d44c57"
+  PKG_FFMPEG_BRANCH="dev/4.4/rpi_import_1"
+  PKG_SHA256="3b42cbffd15d95d59e402475fcdb1aaac9ae6a8404a521b95d1fe79c6b2baad4"
+  PKG_URL="https://github.com/jc-kynesim/rpi-ffmpeg/archive/${PKG_VERSION}.tar.gz"
+  PKG_PATCH_DIRS="libreelec dav1d"
+elif [ "${PROJECT}" = "RPi" -a "${DEVICE}" = "RPi3" ]; then
+  PKG_SHA256="abbce62231baffe237e412689c71ffe01bfc83135afd375f1e538caae87729ed"
+  PKG_URL="https://github.com/radakayot/FFmpeg-xbmc-rpi3/archive/refs/heads/${PKG_VERSION}-Nexus-Alpha1-RPi3.tar.gz"
+  PKG_PATCH_DIRS+=" libreelec"
+  PKG_FFMPEG_RPI="--enable-mmal --enable-sand"
+elif [ "${PROJECT}" = "RPi" ]; then
+  PKG_FFMPEG_RPI="--disable-mmal --disable-rpi --enable-sand"
+  PKG_PATCH_DIRS+=" rpi"
+else
+  PKG_PATCH_DIRS+=" v4l2-request v4l2-drmprime"
+fi
 
 post_unpack() {
   # Fix FFmpeg version
@@ -67,6 +68,12 @@ if [ "${V4L2_SUPPORT}" = "yes" ]; then
   else
     PKG_FFMPEG_V4L2+=" --disable-libudev --disable-v4l2-request"
   fi
+elif [ "${PROJECT}" = "RPi" -a "${DEVICE}" = "RPi3" ]; then
+  PKG_FFMPEG_V4L2="--disable-v4l2_m2m --disable-libv4l2"
+  PKG_FFMPEG_HWACCEL="--disable-decoder=h264_mmal \
+                      --disable-decoder=mpeg2_mmal \
+                      --disable-decoder=mpeg4_mmal \
+                      --disable-decoder=vc1_mmal"
 else
   PKG_FFMPEG_V4L2="--disable-v4l2_m2m --disable-libudev --disable-v4l2-request"
 fi

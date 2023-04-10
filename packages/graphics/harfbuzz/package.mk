@@ -12,7 +12,7 @@ PKG_DEPENDS_TARGET="toolchain cairo freetype glib"
 PKG_LONGDESC="HarfBuzz is an OpenType text shaping engine."
 
 PKG_MESON_OPTS_TARGET="-Dbenchmark=disabled \
-                       -Dcairo=enabled \
+                       -Dcairo=disabled \
                        -Ddocs=disabled \
                        -Dfreetype=enabled \
                        -Dglib=enabled \

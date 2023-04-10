@@ -13,6 +13,11 @@ PKG_DEPENDS_HOST="toolchain"
 PKG_LONGDESC="A free and open source cross-platform media player."
 PKG_BUILD_FLAGS="+speed"
 
+if [ "${PROJECT}" = "RPi" -a "${DEVICE}" = "RPi3" ]; then
+  PKG_SHA256="abbce62231baffe237e412689c71ffe01bfc83135afd375f1e538caae87729ed"
+  PKG_URL="https://github.com/radakayot/xbmc-rpi3/archive/refs/heads/${PKG_VERSION}-RPi3.tar.gz"
+fi
+
 configure_package() {
   # Single threaded LTO is very slow so rely on Kodi for parallel LTO support
   if [ "${LTO_SUPPORT}" = "yes" ] && ! build_with_debug; then
@@ -214,7 +219,12 @@ configure_package() {
 
   if [ ! "${KODIPLAYER_DRIVER}" = "default" -a "${DISPLAYSERVER}" = "no" ]; then
     PKG_DEPENDS_TARGET+=" ${KODIPLAYER_DRIVER} libinput libxkbcommon"
-    if [ "${OPENGLES_SUPPORT}" = yes -a "${KODIPLAYER_DRIVER}" = "${OPENGLES}" ]; then
+    if [ "${KODIPLAYER_DRIVER}" = "bcm2835-driver" ]; then
+      KODI_PLATFORM="-DCORE_PLATFORM_NAME=dmx -DAPP_RENDER_SYSTEM=gles"
+      CFLAGS+=" -DEGL_NO_X11"
+      CXXFLAGS+=" -DEGL_NO_X11"
+      PKG_APPLIANCE_XML="${PKG_DIR}/config/appliance-dmx.xml"
+    elif [ "${OPENGLES_SUPPORT}" = yes -a "${KODIPLAYER_DRIVER}" = "${OPENGLES}" ]; then
       KODI_PLATFORM="-DCORE_PLATFORM_NAME=gbm -DAPP_RENDER_SYSTEM=gles"
       CFLAGS+=" -DEGL_NO_X11"
       CXXFLAGS+=" -DEGL_NO_X11"
@@ -226,7 +236,9 @@ configure_package() {
     fi
   fi
 
-  if [ "${PROJECT}" = "Allwinner" -o "${PROJECT}" = "Rockchip" -o "${PROJECT}" = "RPi" ]; then
+  if [ "$PROJECT" = "RPi" -a "$DEVICE" = "RPi3" ]; then
+    PKG_PATCH_DIRS+=" " # future patches
+  elif [ "${PROJECT}" = "Allwinner" -o "${PROJECT}" = "Rockchip" -o "${PROJECT}" = "RPi" ]; then
     PKG_PATCH_DIRS+=" drmprime-filter"
   fi
 

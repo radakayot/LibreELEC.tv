@@ -1,0 +1,402 @@
+diff --no-dereference -ruN linux-510/drivers/staging/vc04_services/bcm2835-audio/bcm2835.c linux-test/drivers/staging/vc04_services/bcm2835-audio/bcm2835.c
+--- linux-510/drivers/staging/vc04_services/bcm2835-audio/bcm2835.c	2022-08-23 14:59:05.000000000 +0000
++++ linux-test/drivers/staging/vc04_services/bcm2835-audio/bcm2835.c	2023-03-30 13:22:18.000000000 +0000
+@@ -11,17 +11,16 @@
+ #include "bcm2835.h"
+ #include <soc/bcm2835/raspberrypi-firmware.h>
+ 
+-static bool enable_hdmi, enable_hdmi0, enable_hdmi1;
+-static bool enable_headphones;
+-static bool enable_compat_alsa = true;
++static bool enable_hdmi;
++static bool enable_headphones = true;
++static int num_channels = MAX_SUBSTREAMS;
+ 
+ module_param(enable_hdmi, bool, 0444);
+ MODULE_PARM_DESC(enable_hdmi, "Enables HDMI virtual audio device");
+ module_param(enable_headphones, bool, 0444);
+ MODULE_PARM_DESC(enable_headphones, "Enables Headphones virtual audio device");
+-module_param(enable_compat_alsa, bool, 0444);
+-MODULE_PARM_DESC(enable_compat_alsa,
+-		 "Enables ALSA compatibility virtual audio device");
++module_param(num_channels, int, 0644);
++MODULE_PARM_DESC(num_channels, "Number of audio channels (default: 8)");
+ 
+ static void bcm2835_devm_free_vchi_ctx(struct device *dev, void *res)
+ {
+@@ -68,23 +67,20 @@
+ 	enum snd_bcm2835_route route;
+ };
+ 
+-static int bcm2835_audio_alsa_newpcm(struct bcm2835_chip *chip,
++static int bcm2835_audio_dual_newpcm(struct bcm2835_chip *chip,
+ 				     const char *name,
+ 				     enum snd_bcm2835_route route,
+ 				     u32 numchannels)
+ {
+ 	int err;
+ 
+-	err = snd_bcm2835_new_pcm(chip, "bcm2835 ALSA", 0, AUDIO_DEST_AUTO,
+-				  numchannels - 1, false);
+-	if (err)
+-		return err;
++	err = snd_bcm2835_new_pcm(chip, name, 0, route,
++				  numchannels, false);
+ 
+-	err = snd_bcm2835_new_pcm(chip, "bcm2835 IEC958/HDMI", 1, AUDIO_DEST_HDMI0, 1, true);
+ 	if (err)
+ 		return err;
+ 
+-	err = snd_bcm2835_new_pcm(chip, "bcm2835 IEC958/HDMI1", 2, AUDIO_DEST_HDMI1, 1, true);
++	err = snd_bcm2835_new_pcm(chip, "IEC958", 1, route, 1, true);
+ 	if (err)
+ 		return err;
+ 
+@@ -99,42 +95,17 @@
+ 	return snd_bcm2835_new_pcm(chip, name, 0, route, numchannels, false);
+ }
+ 
+-static struct bcm2835_audio_driver bcm2835_audio_alsa = {
+-	.driver = {
+-		.name = "bcm2835_alsa",
+-		.owner = THIS_MODULE,
+-	},
+-	.shortname = "bcm2835 ALSA",
+-	.longname  = "bcm2835 ALSA",
+-	.minchannels = 2,
+-	.newpcm = bcm2835_audio_alsa_newpcm,
+-	.newctl = snd_bcm2835_new_ctl,
+-};
+-
+-static struct bcm2835_audio_driver bcm2835_audio_hdmi0 = {
+-	.driver = {
+-		.name = "bcm2835_hdmi",
+-		.owner = THIS_MODULE,
+-	},
+-	.shortname = "bcm2835 HDMI 1",
+-	.longname  = "bcm2835 HDMI 1",
+-	.minchannels = 1,
+-	.newpcm = bcm2835_audio_simple_newpcm,
+-	.newctl = snd_bcm2835_new_hdmi_ctl,
+-	.route = AUDIO_DEST_HDMI0
+-};
+-
+-static struct bcm2835_audio_driver bcm2835_audio_hdmi1 = {
++static struct bcm2835_audio_driver bcm2835_audio_hdmi = {
+ 	.driver = {
+ 		.name = "bcm2835_hdmi",
+ 		.owner = THIS_MODULE,
+ 	},
+-	.shortname = "bcm2835 HDMI 2",
+-	.longname  = "bcm2835 HDMI 2",
++	.shortname = "bcm2835 HDMI",
++	.longname  = "bcm2835 HDMI",
+ 	.minchannels = 1,
+-	.newpcm = bcm2835_audio_simple_newpcm,
++	.newpcm = bcm2835_audio_dual_newpcm,
+ 	.newctl = snd_bcm2835_new_hdmi_ctl,
+-	.route = AUDIO_DEST_HDMI1
++	.route = AUDIO_DEST_HDMI
+ };
+ 
+ static struct bcm2835_audio_driver bcm2835_audio_headphones = {
+@@ -157,16 +128,8 @@
+ 
+ static struct bcm2835_audio_drivers children_devices[] = {
+ 	{
+-		.audio_driver = &bcm2835_audio_alsa,
+-		.is_enabled = &enable_compat_alsa,
+-	},
+-	{
+-		.audio_driver = &bcm2835_audio_hdmi0,
+-		.is_enabled = &enable_hdmi0,
+-	},
+-	{
+-		.audio_driver = &bcm2835_audio_hdmi1,
+-		.is_enabled = &enable_hdmi1,
++		.audio_driver = &bcm2835_audio_hdmi,
++		.is_enabled = &enable_hdmi,
+ 	},
+ 	{
+ 		.audio_driver = &bcm2835_audio_headphones,
+@@ -313,93 +276,22 @@
+ 	return 0;
+ }
+ 
+-static void set_hdmi_enables(struct device *dev)
+-{
+-	struct device_node *firmware_node;
+-	struct rpi_firmware *firmware;
+-	u32 num_displays, i, display_id;
+-	int ret;
+-
+-	firmware_node = of_parse_phandle(dev->of_node, "brcm,firmware", 0);
+-	firmware = rpi_firmware_get(firmware_node);
+-
+-	if (!firmware)
+-		return;
+-
+-	of_node_put(firmware_node);
+-
+-	ret = rpi_firmware_property(firmware,
+-				    RPI_FIRMWARE_FRAMEBUFFER_GET_NUM_DISPLAYS,
+-				    &num_displays, sizeof(u32));
+-
+-	if (ret)
+-		return;
+-
+-	for (i = 0; i < num_displays; i++) {
+-		display_id = i;
+-		ret = rpi_firmware_property(firmware,
+-				RPI_FIRMWARE_FRAMEBUFFER_GET_DISPLAY_ID,
+-				&display_id, sizeof(display_id));
+-		if (!ret) {
+-			if (display_id == 2)
+-				enable_hdmi0 = true;
+-			if (display_id == 7)
+-				enable_hdmi1 = true;
+-		}
+-	}
+-
+-	if (!enable_hdmi0 && enable_hdmi1) {
+-		/* Swap them over and reassign route. This means
+-		 * that if we only have one connected, it is always named
+-		 *  HDMI1, irrespective of if its on port HDMI0 or HDMI1.
+-		 *  This should match with the naming of HDMI ports in DRM
+-		 */
+-		enable_hdmi0 = true;
+-		enable_hdmi1 = false;
+-		bcm2835_audio_hdmi0.route = AUDIO_DEST_HDMI1;
+-	}
+-}
+-
+ static int snd_bcm2835_alsa_probe(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+-	u32 numchans;
+ 	int err;
+ 
+-	err = of_property_read_u32(dev->of_node, "brcm,pwm-channels",
+-				   &numchans);
+-	if (err) {
+-		dev_err(dev, "Failed to get DT property 'brcm,pwm-channels'");
+-		return err;
+-	}
+-
+-	if (numchans == 0 || numchans > MAX_SUBSTREAMS) {
+-		numchans = MAX_SUBSTREAMS;
+-		dev_warn(dev,
+-			 "Illegal 'brcm,pwm-channels' value, will use %u\n",
+-			 numchans);
+-	}
+-
+-	if (!enable_compat_alsa) {
+-		// In this mode, enable analog output by default
+-		u32 disable_headphones = 0;
+-
+-		if (!of_property_read_bool(dev->of_node, "brcm,disable-hdmi"))
+-			set_hdmi_enables(dev);
+-
+-		of_property_read_u32(dev->of_node,
+-				     "brcm,disable-headphones",
+-				     &disable_headphones);
+-		enable_headphones = !disable_headphones;
+-	} else {
+-		enable_hdmi0 = enable_hdmi;
++	if (num_channels <= 0 || num_channels > MAX_SUBSTREAMS) {
++		num_channels = MAX_SUBSTREAMS;
++		dev_warn(dev, "Illegal num_channels value, will use %u\n",
++			 num_channels);
+ 	}
+ 
+ 	err = bcm2835_devm_add_vchi_ctx(dev);
+ 	if (err)
+ 		return err;
+ 
+-	err = snd_add_child_devices(dev, numchans);
++	err = snd_add_child_devices(dev, num_channels);
+ 	if (err)
+ 		return err;
+ 
+diff --no-dereference -ruN linux-510/drivers/staging/vc04_services/bcm2835-audio/bcm2835-ctl.c linux-test/drivers/staging/vc04_services/bcm2835-audio/bcm2835-ctl.c
+--- linux-510/drivers/staging/vc04_services/bcm2835-audio/bcm2835-ctl.c	2022-08-23 14:59:05.000000000 +0000
++++ linux-test/drivers/staging/vc04_services/bcm2835-audio/bcm2835-ctl.c	2023-03-30 13:23:34.000000000 +0000
+@@ -117,15 +117,6 @@
+ 		.get = snd_bcm2835_ctl_get,
+ 		.put = snd_bcm2835_ctl_put,
+ 	},
+-	{
+-		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+-		.name = "PCM Playback Route",
+-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+-		.private_value = PCM_PLAYBACK_DEVICE,
+-		.info = snd_bcm2835_ctl_info,
+-		.get = snd_bcm2835_ctl_get,
+-		.put = snd_bcm2835_ctl_put,
+-	},
+ };
+ 
+ static int snd_bcm2835_spdif_default_info(struct snd_kcontrol *kcontrol,
+@@ -220,7 +211,14 @@
+ 	return 0;
+ }
+ 
+-int snd_bcm2835_new_ctl(struct bcm2835_chip *chip)
++int snd_bcm2835_new_headphones_ctl(struct bcm2835_chip *chip)
++{
++	strscpy(chip->card->mixername, "Broadcom Mixer", sizeof(chip->card->mixername));
++	return create_ctls(chip, ARRAY_SIZE(snd_bcm2835_ctl),
++			   snd_bcm2835_ctl);
++}
++
++int snd_bcm2835_new_hdmi_ctl(struct bcm2835_chip *chip)
+ {
+ 	int err;
+ 
+@@ -232,71 +230,3 @@
+ 			   snd_bcm2835_spdif);
+ }
+ 
+-static const struct snd_kcontrol_new snd_bcm2835_headphones_ctl[] = {
+-	{
+-		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+-		.name = "Headphone Playback Volume",
+-		.index = 0,
+-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE |
+-			  SNDRV_CTL_ELEM_ACCESS_TLV_READ,
+-		.private_value = PCM_PLAYBACK_VOLUME,
+-		.info = snd_bcm2835_ctl_info,
+-		.get = snd_bcm2835_ctl_get,
+-		.put = snd_bcm2835_ctl_put,
+-		.count = 1,
+-		.tlv = {.p = snd_bcm2835_db_scale}
+-	},
+-	{
+-		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+-		.name = "Headphone Playback Switch",
+-		.index = 0,
+-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+-		.private_value = PCM_PLAYBACK_MUTE,
+-		.info = snd_bcm2835_ctl_info,
+-		.get = snd_bcm2835_ctl_get,
+-		.put = snd_bcm2835_ctl_put,
+-		.count = 1,
+-	}
+-};
+-
+-int snd_bcm2835_new_headphones_ctl(struct bcm2835_chip *chip)
+-{
+-	strscpy(chip->card->mixername, "Broadcom Mixer", sizeof(chip->card->mixername));
+-	return create_ctls(chip, ARRAY_SIZE(snd_bcm2835_headphones_ctl),
+-			   snd_bcm2835_headphones_ctl);
+-}
+-
+-static const struct snd_kcontrol_new snd_bcm2835_hdmi[] = {
+-	{
+-		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+-		.name = "HDMI Playback Volume",
+-		.index = 0,
+-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE |
+-			  SNDRV_CTL_ELEM_ACCESS_TLV_READ,
+-		.private_value = PCM_PLAYBACK_VOLUME,
+-		.info = snd_bcm2835_ctl_info,
+-		.get = snd_bcm2835_ctl_get,
+-		.put = snd_bcm2835_ctl_put,
+-		.count = 1,
+-		.tlv = {.p = snd_bcm2835_db_scale}
+-	},
+-	{
+-		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+-		.name = "HDMI Playback Switch",
+-		.index = 0,
+-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+-		.private_value = PCM_PLAYBACK_MUTE,
+-		.info = snd_bcm2835_ctl_info,
+-		.get = snd_bcm2835_ctl_get,
+-		.put = snd_bcm2835_ctl_put,
+-		.count = 1,
+-	}
+-};
+-
+-int snd_bcm2835_new_hdmi_ctl(struct bcm2835_chip *chip)
+-{
+-	strscpy(chip->card->mixername, "Broadcom Mixer", sizeof(chip->card->mixername));
+-	return create_ctls(chip, ARRAY_SIZE(snd_bcm2835_hdmi),
+-			   snd_bcm2835_hdmi);
+-}
+-
+diff --no-dereference -ruN linux-510/drivers/staging/vc04_services/bcm2835-audio/bcm2835.h linux-test/drivers/staging/vc04_services/bcm2835-audio/bcm2835.h
+--- linux-510/drivers/staging/vc04_services/bcm2835-audio/bcm2835.h	2022-08-23 14:59:05.000000000 +0000
++++ linux-test/drivers/staging/vc04_services/bcm2835-audio/bcm2835.h	2023-03-30 13:23:48.000000000 +0000
+@@ -22,7 +22,7 @@
+ /* macros for alsa2chip and chip2alsa, instead of functions */
+ 
+ // convert alsa to chip volume (defined as macro rather than function call)
+-#define alsa2chip(vol) (uint)(-(((vol) << 8) / 100))
++#define alsa2chip(vol) ((uint)(-(((vol) << 8) / 100)))
+ 
+ // convert chip to alsa volume
+ #define chip2alsa(vol) -(((vol) * 100) >> 8)
+@@ -33,9 +33,7 @@
+ enum snd_bcm2835_route {
+ 	AUDIO_DEST_AUTO = 0,
+ 	AUDIO_DEST_HEADPHONES = 1,
+-	AUDIO_DEST_HDMI = 2,  // for backwards compatibility.
+-	AUDIO_DEST_HDMI0 = 2,
+-	AUDIO_DEST_HDMI1 = 3,
++	AUDIO_DEST_HDMI = 2,
+ 	AUDIO_DEST_MAX,
+ };
+ 
+diff --no-dereference -ruN linux-510/drivers/staging/vc04_services/bcm2835-audio/bcm2835-pcm.c linux-test/drivers/staging/vc04_services/bcm2835-audio/bcm2835-pcm.c
+--- linux-510/drivers/staging/vc04_services/bcm2835-audio/bcm2835-pcm.c	2022-08-23 14:59:05.000000000 +0000
++++ linux-test/drivers/staging/vc04_services/bcm2835-audio/bcm2835-pcm.c	2023-03-30 13:24:05.000000000 +0000
+@@ -12,7 +12,7 @@
+ static const struct snd_pcm_hardware snd_bcm2835_playback_hw = {
+ 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
+ 		 SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
+-		 SNDRV_PCM_INFO_SYNC_APPLPTR),
++		 SNDRV_PCM_INFO_SYNC_APPLPTR | SNDRV_PCM_INFO_BATCH),
+ 	.formats = SNDRV_PCM_FMTBIT_U8 | SNDRV_PCM_FMTBIT_S16_LE,
+ 	.rates = SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_8000_192000,
+ 	.rate_min = 8000,
+@@ -29,7 +29,7 @@
+ static const struct snd_pcm_hardware snd_bcm2835_playback_spdif_hw = {
+ 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
+ 		 SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
+-		 SNDRV_PCM_INFO_SYNC_APPLPTR),
++		 SNDRV_PCM_INFO_SYNC_APPLPTR | SNDRV_PCM_INFO_BATCH),
+ 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
+ 	.rates = SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 |
+ 	SNDRV_PCM_RATE_48000,
+diff --no-dereference -ruN linux-510/drivers/staging/vc04_services/vc-sm-cma/vc_sm.c linux-test/drivers/staging/vc04_services/vc-sm-cma/vc_sm.c
+--- linux-510/drivers/staging/vc04_services/vc-sm-cma/vc_sm.c	2022-08-23 14:59:05.000000000 +0000
++++ linux-test/drivers/staging/vc04_services/vc-sm-cma/vc_sm.c	2023-03-30 13:10:38.000000000 +0000
+@@ -720,6 +720,7 @@
+ 	struct dma_buf_attachment *attach = NULL;
+ 	struct sg_table *sgt = NULL;
+ 	dma_addr_t dma_addr;
++	u32 cache_alias;
+ 	int ret = 0;
+ 	int status;
+ 
+@@ -762,7 +763,8 @@
+ 	import.type = VC_SM_ALLOC_NON_CACHED;
+ 	dma_addr = sg_dma_address(sgt->sgl);
+ 	import.addr = (u32)dma_addr;
+-	if ((import.addr & 0xC0000000) != 0xC0000000) {
++	cache_alias = import.addr & 0xC0000000;
++	if (cache_alias != 0xC0000000 && cache_alias != 0x80000000) {
+ 		pr_err("%s: Expecting an uncached alias for dma_addr %pad\n",
+ 		       __func__, &dma_addr);
+ 		import.addr |= 0xC0000000;
+@@ -1242,7 +1244,9 @@
+ 		return NULL;
+ 
+ 	case VC_SM_CACHE_OP_INV:
++		return dmac_inv_range;
+ 	case VC_SM_CACHE_OP_CLEAN:
++		return dmac_clean_range;
+ 	case VC_SM_CACHE_OP_FLUSH:
+ 		return dmac_flush_range;
+ 

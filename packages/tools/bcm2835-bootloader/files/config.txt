@@ -9,8 +9,8 @@
 # http://rpf.io/configtxt
 ################################################################################
 
-# Default GPU memory split, 76MB are needed for H264 decoder
-gpu_mem=76
+# Default GPU memory split, 128MB is needed for H264/HEVC decoder
+gpu_mem=128
 
 # Don't send initial active source message.
 # Avoids bringing CEC (enabled TV) out of standby and channel switch when
