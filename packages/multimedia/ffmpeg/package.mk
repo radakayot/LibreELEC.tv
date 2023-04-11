@@ -4,13 +4,13 @@
 
 PKG_NAME="ffmpeg"
 PKG_VERSION="4.4.1"
-PKG_SHA256="eadbad9e9ab30b25f5520fbfde99fae4a92a1ae3c0257a8d68569a4651e30e02"
+PKG_SHA256="227c0d478ef812ba01a3e18af823905ccc0cdc062d5a464505557e348985d92f"
 PKG_LICENSE="GPL-3.0-only"
 PKG_SITE="https://ffmpeg.org"
 PKG_URL="http://ffmpeg.org/releases/ffmpeg-${PKG_VERSION}.tar.xz"
 PKG_DEPENDS_TARGET="toolchain zlib bzip2 openssl speex"
 PKG_LONGDESC="FFmpeg is a complete, cross-platform solution to record, convert and stream audio and video."
-PKG_PATCH_DIRS="kodi libreelec"
+PKG_PATCH_DIRS="libreelec"
 
 if [ "${PROJECT}" = "Amlogic" ]; then
   PKG_VERSION="f9638b6331277e53ecd9276db5fe6dcd91d44c57"
@@ -19,15 +19,14 @@ if [ "${PROJECT}" = "Amlogic" ]; then
   PKG_URL="https://github.com/jc-kynesim/rpi-ffmpeg/archive/${PKG_VERSION}.tar.gz"
   PKG_PATCH_DIRS="libreelec dav1d"
 elif [ "${PROJECT}" = "RPi" -a "${DEVICE}" = "RPi3" ]; then
-  PKG_SHA256="abbce62231baffe237e412689c71ffe01bfc83135afd375f1e538caae87729ed"
+  PKG_SHA256="227c0d478ef812ba01a3e18af823905ccc0cdc062d5a464505557e348985d92f"
   PKG_URL="https://github.com/radakayot/FFmpeg-xbmc-rpi3/archive/refs/heads/${PKG_VERSION}-Nexus-Alpha1-RPi3.tar.gz"
-  PKG_PATCH_DIRS+=" libreelec"
   PKG_FFMPEG_RPI="--enable-mmal --enable-sand"
 elif [ "${PROJECT}" = "RPi" ]; then
   PKG_FFMPEG_RPI="--disable-mmal --disable-rpi --enable-sand"
-  PKG_PATCH_DIRS+=" rpi"
+  PKG_PATCH_DIRS+=" kodi rpi"
 else
-  PKG_PATCH_DIRS+=" v4l2-request v4l2-drmprime"
+  PKG_PATCH_DIRS+=" kodi v4l2-request v4l2-drmprime"
 fi
 
 post_unpack() {

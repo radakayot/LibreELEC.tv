@@ -14,7 +14,7 @@ PKG_LONGDESC="A free and open source cross-platform media player."
 PKG_BUILD_FLAGS="+speed"
 
 if [ "${PROJECT}" = "RPi" -a "${DEVICE}" = "RPi3" ]; then
-  PKG_SHA256="abbce62231baffe237e412689c71ffe01bfc83135afd375f1e538caae87729ed"
+  PKG_SHA256="83d3ca645324434c8f0593f8f1c7bfa41ed0a922611cb3b3a9d0fbf978527f87"
   PKG_URL="https://github.com/radakayot/xbmc-rpi3/archive/refs/heads/${PKG_VERSION}-RPi3.tar.gz"
 fi
 
