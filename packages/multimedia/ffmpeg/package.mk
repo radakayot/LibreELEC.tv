@@ -19,8 +19,8 @@ if [ "${PROJECT}" = "Amlogic" ]; then
   PKG_URL="https://github.com/jc-kynesim/rpi-ffmpeg/archive/${PKG_VERSION}.tar.gz"
   PKG_PATCH_DIRS="libreelec dav1d"
 elif [ "${PROJECT}" = "RPi" -a "${DEVICE}" = "RPi3" ]; then
-  PKG_SHA256="227c0d478ef812ba01a3e18af823905ccc0cdc062d5a464505557e348985d92f"
-  PKG_URL="https://github.com/radakayot/FFmpeg-xbmc-rpi3/archive/refs/heads/${PKG_VERSION}-Nexus-Alpha1-RPi3.tar.gz"
+  PKG_SHA256="8f9e2fcee593ad304c2a7b3c72d264e1f724abacfade14c61310b8fee05f171a"
+  PKG_URL="https://github.com/radakayot/FFmpeg-xbmc-rpi3/archive/refs/tags/rpi3/${PKG_VERSION}-Nexus-Alpha1-u1.tar.gz"
   PKG_FFMPEG_RPI="--enable-mmal --enable-sand"
 elif [ "${PROJECT}" = "RPi" ]; then
   PKG_FFMPEG_RPI="--disable-mmal --disable-rpi --enable-sand"
